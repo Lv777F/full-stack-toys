@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "projects": {
+    "api": "apps/api",
+    "api-interfaces": "libs/api-interfaces",
+    "shell": "apps/shell",
+    "shell-e2e": "apps/shell-e2e"
+  }
+}
