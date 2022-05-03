@@ -1,6 +1,5 @@
+import { Message } from '@fst/api-interfaces';
 import { Controller, Get } from '@nestjs/common';
-
-import { Message } from '@full-stack-toys/api-interfaces';
 
 import { AppService } from './app.service';
 

@@ -2,7 +2,7 @@
   "projectType": "application",
   "root": "apps/shell",
   "sourceRoot": "apps/shell/src",
-  "prefix": "full-stack-toys",
+  "prefix": "fst",
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",

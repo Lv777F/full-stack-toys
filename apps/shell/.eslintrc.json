@@ -21,7 +21,7 @@
           "error",
           {
             "type": "element",
-            "prefix": "full-stack-toys",
+            "prefix": "fst",
             "style": "kebab-case"
           }
         ]
