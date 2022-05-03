@@ -1,9 +1,9 @@
-import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Message } from '@full-stack-toys/api-interfaces';
+import { Component } from '@angular/core';
+import { Message } from '@fst/api-interfaces';
 
 @Component({
-  selector: 'full-stack-toys-root',
+  selector: 'fst-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
