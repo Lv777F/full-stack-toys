@@ -4,7 +4,6 @@
     "defaultBase": "main"
   },
   "cli": {
-    "defaultCollection": "@nrwl/angular",
     "packageManager": "npm"
   },
   "implicitDependencies": {
@@ -46,5 +45,6 @@
       "style": "css"
     }
   },
-  "defaultProject": "shell"
+  "defaultProject": "shell",
+  "$schema": "./node_modules/nx/schemas/nx-schema.json"
 }
