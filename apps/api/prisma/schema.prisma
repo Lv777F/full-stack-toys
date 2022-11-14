@@ -1,5 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -7,3 +7,41 @@ datasource db {
   url      = "postgresql://postgres:9527@localhost:5432/full_stack_toys?schema=public"
 }
 
+model User {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  udpatedAt   DateTime @updatedAt
+
+  podcasts PodcastAnchor[]
+
+  @@map("Users")
+}
+
+model Podcast {
+  id        Int             @id @default(autoincrement())
+  title     String
+  shownote  String
+  createdAt DateTime        @default(now())
+  udpatedAt DateTime        @updatedAt
+  anchors   PodcastAnchor[]
+
+  @@map("Podcasts")
+}
+
+enum PodcastIdentity {
+  Host
+  Guest
+}
+
+model PodcastAnchor {
+  podcastId Int
+  podcast   Podcast         @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+  anchorId  Int
+  anchor    User            @relation(fields: [anchorId], references: [id], onDelete: Cascade)
+  identity  PodcastIdentity
+
+  @@id([podcastId, anchorId])
+  @@map("PodcastAnchors")
+}
