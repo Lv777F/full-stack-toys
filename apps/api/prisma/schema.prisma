@@ -3,11 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./db.sql"
+  provider = "postgres"
+  url      = "postgresql://postgres:9527@localhost:5432/full_stack_toys?schema=public"
 }
 
-model Todo {
-  id String @id @default(cuid())
-  @@map("todos")
-}

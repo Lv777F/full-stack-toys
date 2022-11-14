@@ -1,0 +1,14 @@
+version: '3'
+services:
+  dev-db:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 9527
+      POSTGRES_DB: full_stack_toys
+    networks:
+      - backend
+networks:
+  backend:
