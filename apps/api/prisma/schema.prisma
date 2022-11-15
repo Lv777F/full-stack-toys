@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:9527@localhost:5432/full_stack_toys?schema=public"
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  udpatedAt   DateTime @updatedAt
+
+  podcasts PodcastAnchor[]
+  posts    Post[]
+  status   String?
+
+  @@map("Users")
+}
+
+model Podcast {
+  id        Int             @id @default(autoincrement())
+  title     String
+  shownote  String?         @db.Text
+  createdAt DateTime        @default(now())
+  udpatedAt DateTime        @updatedAt
+  anchors   PodcastAnchor[]
+  tags      PodcastTag[]
+
+  @@map("Podcasts")
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  title     String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  Int
+  content   String?   @db.Text
+  tags      PostTag[]
+
+  @@map("Posts")
+}
+
+enum PodcastIdentity {
+  Host
+  Guest
+}
+
+model PodcastAnchor {
+  podcastId Int
+  podcast   Podcast         @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+  anchorId  Int
+  anchor    User            @relation(fields: [anchorId], references: [id], onDelete: Cascade)
+  identity  PodcastIdentity
+  adjective String?
+
+  @@id([podcastId, anchorId])
+  @@map("PodcastAnchors")
+}
+
+model Tag {
+  id        Int          @id @default(autoincrement())
+  name      String
+  createdAt DateTime     @default(now())
+  udpatedAt DateTime     @updatedAt
+  podcasts  PodcastTag[]
+  posts     PostTag[]
+  link      String?
+
+  @@map("Tags")
+}
+
+model PodcastTag {
+  podcastId Int
+  podcast   Podcast  @relation(fields: [podcastId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tagId     Int
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  assigndAt DateTime @default(now())
+
+  @@id([podcastId, tagId])
+  @@map("PodcastTags")
+}
+
+model PostTag {
+  postId Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tagId  Int
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([postId, tagId])
+  @@map("PostTags")
+}
