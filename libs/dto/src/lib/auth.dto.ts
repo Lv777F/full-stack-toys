@@ -21,3 +21,13 @@ export class SignupDTO {
 
   description?: string;
 }
+
+export class LoginDTO {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+}
