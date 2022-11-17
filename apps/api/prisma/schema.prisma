@@ -8,19 +8,18 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   name      String
   profile   String?
-  createdAt DateTime @default(now())
-  udpatedAt DateTime @updatedAt
-  email     String?  @unique
+  createdAt DateTime    @default(now())
+  udpatedAt DateTime    @updatedAt
+  email     String?     @unique
   hash      String?
+  tokens    UserToken[]
 
   podcasts PodcastAnchor[]
   posts    Post[]
   status   String?
-
-  refreshToken UserToken[]
 
   @@map("Users")
 }
@@ -30,13 +29,12 @@ enum TokenType {
 }
 
 model UserToken {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  user      User      @relation(fields: [userId], references: [id])
-  createdAt DateTime  @default(now())
-  token     String
-  type      TokenType
+  userId Int
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token  String
+  type   TokenType
 
+  @@id([userId, token])
   @@map("UserTokens")
 }
 

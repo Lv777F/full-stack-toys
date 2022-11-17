@@ -14,7 +14,7 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   desensitize() {
-    return pipe(map(({ refreshToken, hash, ...user }: User) => user));
+    return pipe(map(({ hash, ...user }: User) => user));
   }
 
   createUser(user: Pick<User, 'email' | 'name'> & { hash?: User['hash'] }) {
@@ -65,32 +65,5 @@ export class UserService {
       }),
       this.desensitize()
     );
-  }
-
-  checkRefreshToken(id: User['id'], refreshToken: string) {
-    return from(
-      this.prisma.user.findUnique({
-        where: { id },
-      })
-    ).pipe(
-      tap((user) => {
-        if (user.refreshToken !== refreshToken)
-          throw new ForbiddenException('身份凭据已过期');
-      }),
-      this.desensitize()
-    );
-  }
-
-  updateRefreshToken(id: User['id'], refreshToken: string | null) {
-    return from(
-      this.prisma.user.update({
-        where: {
-          id,
-        },
-        data: {
-          refreshToken,
-        },
-      })
-    ).pipe(this.desensitize());
   }
 }
