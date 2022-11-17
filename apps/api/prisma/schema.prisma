@@ -20,6 +20,8 @@ model User {
   posts    Post[]
   status   String?
 
+  refreshToken String?
+
   @@map("Users")
 }
 

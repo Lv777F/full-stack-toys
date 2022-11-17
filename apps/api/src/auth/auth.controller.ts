@@ -1,6 +1,8 @@
 import { SignupDTO } from '@full-stack-toys/dto';
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { User } from '@prisma/client';
+import { GetUser } from '../user/get-user.decorator';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -14,7 +16,19 @@ export class AuthController {
 
   @UseGuards(AuthGuard('local'))
   @Post('login')
-  login(@Request() req) {
-    return this.authService.signToken(req.user);
+  login(@GetUser() user: User) {
+    return this.authService.signToken(user);
+  }
+
+  @UseGuards(AuthGuard('jwt-refresh'))
+  @Get('refresh')
+  refresh(@GetUser() user: User) {
+    return this.authService.signToken(user);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('logout')
+  logout(@GetUser('id') userId: User['id']) {
+    return this.authService.logout(userId).pipe(() => null);
   }
 }
