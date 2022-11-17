@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { exhaustMap, forkJoin, from, map } from 'rxjs';
+import { delayWhen, exhaustMap, forkJoin, from, map } from 'rxjs';
 import { UserService } from '../user/user.service';
 @Injectable()
 export class AuthService {
@@ -34,10 +34,8 @@ export class AuthService {
           }
         )
       ).pipe(
-        exhaustMap((refreshToken) =>
-          this.userService
-            .updateRefreshToken(id, refreshToken)
-            .pipe(map(() => refreshToken))
+        delayWhen((refreshToken) =>
+          this.userService.updateRefreshToken(id, refreshToken)
         )
       ),
     ]).pipe(

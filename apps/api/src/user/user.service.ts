@@ -6,17 +6,7 @@ import {
 import { User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import * as argon2 from 'argon2';
-import {
-  catchError,
-  exhaustMap,
-  filter,
-  from,
-  map,
-  of,
-  pipe,
-  throwError,
-  throwIfEmpty,
-} from 'rxjs';
+import { catchError, delayWhen, from, map, pipe, tap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -35,13 +25,13 @@ export class UserService {
         },
       })
     ).pipe(
-      catchError((err) =>
-        throwError(() =>
-          err instanceof PrismaClientKnownRequestError && err.code === 'P2002'
-            ? new UnprocessableEntityException('邮箱已注册')
-            : err
-        )
-      ),
+      catchError((err) => {
+        if (err instanceof PrismaClientKnownRequestError) {
+          if (err.code === 'P2002')
+            throw new UnprocessableEntityException('邮箱已注册');
+        }
+        throw err;
+      }),
       this.desensitize()
     );
   }
@@ -64,15 +54,15 @@ export class UserService {
         },
       })
     ).pipe(
-      exhaustMap((user) =>
-        user
-          ? from(argon2.verify(user.hash, password)).pipe(
-              map((result) => (result ? user : null))
-            )
-          : of(null)
-      ),
-      filter(Boolean),
-      throwIfEmpty(() => new ForbiddenException('邮箱或密码错误')),
+      delayWhen((user) => {
+        if (!user) throw new ForbiddenException('邮箱或密码错误');
+
+        return from(argon2.verify(user.hash, password)).pipe(
+          tap((result) => {
+            if (!result) throw new ForbiddenException('邮箱或密码错误');
+          })
+        );
+      }),
       this.desensitize()
     );
   }
@@ -83,11 +73,10 @@ export class UserService {
         where: { id },
       })
     ).pipe(
-      exhaustMap((user) =>
-        user.refreshToken === refreshToken
-          ? of(user)
-          : throwError(() => new ForbiddenException('身份凭据已过期'))
-      ),
+      tap((user) => {
+        if (user.refreshToken !== refreshToken)
+          throw new ForbiddenException('身份凭据已过期');
+      }),
       this.desensitize()
     );
   }
