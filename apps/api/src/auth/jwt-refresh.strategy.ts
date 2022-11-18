@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { TokenType } from '@prisma/client';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, map, tap } from 'rxjs';
 import { environment } from '../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -22,13 +21,16 @@ export class JwtRefreshStrategy extends PassportStrategy(
     });
   }
 
-  validate(req: Request, { sub: userId }: { sub: number }) {
+  validate(req: Request, { sub: id }: { sub: number }) {
     return lastValueFrom(
-      this.authService.validateUserToken(
-        TokenType.Refresh,
-        userId,
-        req.get('Authorization').replace('Bearer ', '')
-      )
+      this.authService
+        .checkToken(req.get('Authorization').replace('Bearer ', ''))
+        .pipe(
+          tap((result) => {
+            if (!result) throw new ForbiddenException('凭据过期');
+          }),
+          map(() => ({ id }))
+        )
     );
   }
 }

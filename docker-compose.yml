@@ -1,6 +1,6 @@
 version: '3'
 services:
-  dev-db:
+  postgres:
     image: postgres
     ports:
       - 5432:5432
@@ -8,6 +8,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 9527
       POSTGRES_DB: full_stack_toys
+    networks:
+      - backend
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
     networks:
       - backend
 networks:

@@ -1,20 +1,42 @@
 import { SignupDTO } from '@full-stack-toys/dto';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  ForbiddenException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { TokenType, User, UserToken } from '@prisma/client';
+import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { Cache } from 'cache-manager';
 import { delayWhen, exhaustMap, forkJoin, from, map, tap } from 'rxjs';
-import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
+
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
     private userService: UserService,
     private jwtService: JwtService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    @Inject(CACHE_MANAGER) private cacheService: Cache
   ) {}
+
+  validateUser(email: User['email'], password: string) {
+    return this.userService.getUserByEmail(email).pipe(
+      tap((user) => {
+        if (!user) throw new ForbiddenException('邮箱或密码错误');
+      }),
+      delayWhen(({ hash }) =>
+        from(argon2.verify(hash, password)).pipe(
+          tap((result) => {
+            if (!result) throw new ForbiddenException('邮箱或密码错误');
+          })
+        )
+      ),
+      map(({ id }) => ({ id }))
+    );
+  }
 
   generateTokens(userId: User['id']) {
     return forkJoin([
@@ -41,42 +63,6 @@ export class AuthService {
     );
   }
 
-  login(userId: User['id']) {
-    return this.generateTokens(userId).pipe(
-      delayWhen(({ refreshToken }) =>
-        from(
-          this.prisma.userToken.create({
-            data: {
-              userId,
-              token: refreshToken,
-              type: TokenType.Refresh,
-            },
-          })
-        )
-      )
-    );
-  }
-
-  refresh(userId: User['id'], token: UserToken['token']) {
-    return this.generateTokens(userId).pipe(
-      delayWhen(({ refreshToken }) =>
-        from(
-          this.prisma.userToken.update({
-            where: {
-              userId_token: {
-                userId,
-                token,
-              },
-            },
-            data: {
-              token: refreshToken,
-            },
-          })
-        )
-      )
-    );
-  }
-
   signup({ password, ...userInfo }: SignupDTO) {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
@@ -85,44 +71,21 @@ export class AuthService {
     );
   }
 
-  validateUserToken(
-    tokenType: TokenType,
-    userId: User['id'],
-    token: UserToken['token']
-  ) {
-    return from(
-      this.prisma.userToken.findUnique({
-        where: {
-          userId_token: {
-            userId,
-            token,
-          },
-        },
-        include: {
-          user: true,
-        },
-      })
-    ).pipe(
-      tap((userToken) => {
-        if (!userToken) throw new ForbiddenException('凭据无效');
-        if (userToken.type !== tokenType)
-          throw new ForbiddenException('凭据类型错误');
-      }),
-      map(({ user }) => user),
-      this.userService.desensitize()
+  login(userId: User['id']) {
+    return this.generateTokens(userId);
+  }
+
+  refresh(userId: User['id'], token: string) {
+    return this.generateTokens(userId).pipe(
+      delayWhen(() => this.logout(token))
     );
   }
 
-  deleteToken(userId: User['id'], token: UserToken['token']) {
-    return from(
-      this.prisma.userToken.delete({
-        where: {
-          userId_token: {
-            userId,
-            token,
-          },
-        },
-      })
-    );
+  logout(token: string) {
+    return from(this.cacheService.set(`bl_${token}`, true));
+  }
+
+  checkToken(token: string) {
+    return from(this.cacheService.get(`bl_${token}`)).pipe(map((r) => !r));
   }
 }

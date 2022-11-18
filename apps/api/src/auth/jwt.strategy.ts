@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { lastValueFrom } from 'rxjs';
 import { environment } from '../environments/environment';
 import { UserService } from '../user/user.service';
 
@@ -16,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate({ sub: userId }: { sub: number }) {
-    return lastValueFrom(this.userService.getUserById(userId));
+  validate({ sub: id }: { sub: number }) {
+    return { id };
   }
 }

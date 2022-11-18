@@ -1,12 +1,7 @@
-import {
-  ForbiddenException,
-  Injectable,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import * as argon2 from 'argon2';
-import { catchError, delayWhen, from, map, pipe, tap } from 'rxjs';
+import { catchError, from, map, pipe } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -46,24 +41,17 @@ export class UserService {
     ).pipe(this.desensitize());
   }
 
-  validateUser(email: User['email'], password: string) {
+  getUserByEmail(email: User['email']) {
     return from(
       this.prisma.user.findUnique({
         where: {
           email,
         },
+        select: {
+          hash: true,
+          id: true,
+        },
       })
-    ).pipe(
-      delayWhen((user) => {
-        if (!user) throw new ForbiddenException('邮箱或密码错误');
-
-        return from(argon2.verify(user.hash, password)).pipe(
-          tap((result) => {
-            if (!result) throw new ForbiddenException('邮箱或密码错误');
-          })
-        );
-      }),
-      this.desensitize()
     );
   }
 }
