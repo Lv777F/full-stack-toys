@@ -11,7 +11,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
 import { map } from 'rxjs';
-import { CurrentUser } from '../user/get-user.decorator';
+import { CurrentUserId } from '../user/get-user.decorator';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -26,14 +26,14 @@ export class AuthController {
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @HttpCode(200)
-  login(@CurrentUser('id') userId: User['id']) {
+  login(@CurrentUserId() userId: User['id']) {
     return this.authService.login(userId);
   }
 
   @UseGuards(AuthGuard('jwt-refresh'))
   @Get('refresh')
   refresh(
-    @CurrentUser('id') userId: User['id'],
+    @CurrentUserId() userId: User['id'],
     @Headers('Authorization') authorization: string
   ) {
     return this.authService.refresh(
@@ -44,12 +44,9 @@ export class AuthController {
 
   @UseGuards(AuthGuard('jwt-refresh'))
   @Get('logout')
-  logout(
-    @CurrentUser('id') userId: User['id'],
-    @Headers('Authorization') authorization: string
-  ) {
+  logout(@Headers('Authorization') authorization: string) {
     return this.authService
-      .deleteToken(userId, authorization.replace('Bearer ', ''))
+      .logout(authorization.replace('Bearer ', ''))
       .pipe(map(() => null));
   }
 }

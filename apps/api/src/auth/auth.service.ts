@@ -1,21 +1,55 @@
 import { SignupDTO } from '@full-stack-toys/dto';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  ForbiddenException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { TokenType, User, UserToken } from '@prisma/client';
+import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { Cache } from 'cache-manager';
 import { delayWhen, exhaustMap, forkJoin, from, map, tap } from 'rxjs';
-import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
+
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
     private userService: UserService,
     private jwtService: JwtService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    @Inject(CACHE_MANAGER) private cacheService: Cache
   ) {}
 
+  /**
+   * 校验用户名和密码
+   * @param email 邮箱
+   * @param password 密码
+   * @returns 包含 userId 的对象, 用于 passport 携带到 req 中
+   */
+  validateUser(email: User['email'], password: string) {
+    return this.userService.getUserByEmail(email).pipe(
+      tap((user) => {
+        if (!user) throw new ForbiddenException('邮箱或密码错误');
+      }),
+      delayWhen(({ hash }) =>
+        // 校验密码与 hash
+        from(argon2.verify(hash, password)).pipe(
+          tap((result) => {
+            if (!result) throw new ForbiddenException('邮箱或密码错误');
+          })
+        )
+      ),
+      map(({ id }) => ({ id }))
+    );
+  }
+
+  /**
+   * 生成 accessToken & refreshToken
+   * @param userId
+   * @returns tokens
+   */
   generateTokens(userId: User['id']) {
     return forkJoin([
       from(
@@ -41,42 +75,11 @@ export class AuthService {
     );
   }
 
-  login(userId: User['id']) {
-    return this.generateTokens(userId).pipe(
-      delayWhen(({ refreshToken }) =>
-        from(
-          this.prisma.userToken.create({
-            data: {
-              userId,
-              token: refreshToken,
-              type: TokenType.Refresh,
-            },
-          })
-        )
-      )
-    );
-  }
-
-  refresh(userId: User['id'], token: UserToken['token']) {
-    return this.generateTokens(userId).pipe(
-      delayWhen(({ refreshToken }) =>
-        from(
-          this.prisma.userToken.update({
-            where: {
-              userId_token: {
-                userId,
-                token,
-              },
-            },
-            data: {
-              token: refreshToken,
-            },
-          })
-        )
-      )
-    );
-  }
-
+  /**
+   * 注册
+   * @param userData 注册必须信息
+   * @returns tokens
+   */
   signup({ password, ...userInfo }: SignupDTO) {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
@@ -85,44 +88,46 @@ export class AuthService {
     );
   }
 
-  validateUserToken(
-    tokenType: TokenType,
-    userId: User['id'],
-    token: UserToken['token']
-  ) {
-    return from(
-      this.prisma.userToken.findUnique({
-        where: {
-          userId_token: {
-            userId,
-            token,
-          },
-        },
-        include: {
-          user: true,
-        },
-      })
-    ).pipe(
-      tap((userToken) => {
-        if (!userToken) throw new ForbiddenException('凭据无效');
-        if (userToken.type !== tokenType)
-          throw new ForbiddenException('凭据类型错误');
-      }),
-      map(({ user }) => user),
-      this.userService.desensitize()
+  /**
+   * 登录
+   * @param userId
+   * @returns tokens
+   */
+  login(userId: User['id']) {
+    return this.generateTokens(userId);
+  }
+
+  /**
+   * 刷新 token
+   * @param userId
+   * @param token 当前 refreshToken
+   * @returns tokens
+   */
+  refresh(userId: User['id'], token: string) {
+    return this.generateTokens(userId).pipe(
+      delayWhen(() =>
+        // 使当前使用的refreshToken失效
+        this.logout(token)
+      )
     );
   }
 
-  deleteToken(userId: User['id'], token: UserToken['token']) {
-    return from(
-      this.prisma.userToken.delete({
-        where: {
-          userId_token: {
-            userId,
-            token,
-          },
-        },
-      })
-    );
+  /**
+   * 失效当前 refreshToken
+   * @param token
+   * @returns
+   */
+  logout(token: string) {
+    // 添加当前 token 到 redis 黑名单
+    return from(this.cacheService.set(`bl_${token}`, true));
+  }
+
+  /**
+   * 判断当前 token 是否有效 ( 不在 redis 黑名单中 )
+   * @param token
+   * @returns redis 查询结果
+   */
+  checkToken(token: string) {
+    return from(this.cacheService.get(`bl_${token}`)).pipe(map((r) => !r));
   }
 }

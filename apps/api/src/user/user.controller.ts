@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
-import { CurrentUser } from './get-user.decorator';
+import { CurrentUserId } from './get-user.decorator';
 import { UserService } from './user.service';
 
 @UseGuards(AuthGuard('jwt'))
@@ -16,8 +16,8 @@ export class UserController {
   constructor(private userService: UserService) {}
 
   @Get('me')
-  getMe(@CurrentUser() user: User) {
-    return user;
+  getMe(@CurrentUserId() userId: User['id']) {
+    return this.userService.getUserById(userId);
   }
 
   @Get(':id')
