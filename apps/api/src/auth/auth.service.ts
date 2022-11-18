@@ -22,12 +22,19 @@ export class AuthService {
     @Inject(CACHE_MANAGER) private cacheService: Cache
   ) {}
 
+  /**
+   * 校验用户名和密码
+   * @param email 邮箱
+   * @param password 密码
+   * @returns 包含 userId 的对象, 用于 passport 携带到 req 中
+   */
   validateUser(email: User['email'], password: string) {
     return this.userService.getUserByEmail(email).pipe(
       tap((user) => {
         if (!user) throw new ForbiddenException('邮箱或密码错误');
       }),
       delayWhen(({ hash }) =>
+        // 校验密码与 hash
         from(argon2.verify(hash, password)).pipe(
           tap((result) => {
             if (!result) throw new ForbiddenException('邮箱或密码错误');
@@ -38,6 +45,11 @@ export class AuthService {
     );
   }
 
+  /**
+   * 生成 accessToken & refreshToken
+   * @param userId
+   * @returns tokens
+   */
   generateTokens(userId: User['id']) {
     return forkJoin([
       from(
@@ -63,6 +75,11 @@ export class AuthService {
     );
   }
 
+  /**
+   * 注册
+   * @param userData 注册必须信息
+   * @returns tokens
+   */
   signup({ password, ...userInfo }: SignupDTO) {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
@@ -71,20 +88,45 @@ export class AuthService {
     );
   }
 
+  /**
+   * 登录
+   * @param userId
+   * @returns tokens
+   */
   login(userId: User['id']) {
     return this.generateTokens(userId);
   }
 
+  /**
+   * 刷新 token
+   * @param userId
+   * @param token 当前 refreshToken
+   * @returns tokens
+   */
   refresh(userId: User['id'], token: string) {
     return this.generateTokens(userId).pipe(
-      delayWhen(() => this.logout(token))
+      delayWhen(() =>
+        // 使当前使用的refreshToken失效
+        this.logout(token)
+      )
     );
   }
 
+  /**
+   * 失效当前 refreshToken
+   * @param token
+   * @returns
+   */
   logout(token: string) {
+    // 添加当前 token 到 redis 黑名单
     return from(this.cacheService.set(`bl_${token}`, true));
   }
 
+  /**
+   * 判断当前 token 是否有效 ( 不在 redis 黑名单中 )
+   * @param token
+   * @returns redis 查询结果
+   */
   checkToken(token: string) {
     return from(this.cacheService.get(`bl_${token}`)).pipe(map((r) => !r));
   }
