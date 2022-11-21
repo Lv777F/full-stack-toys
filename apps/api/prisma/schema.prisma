@@ -15,10 +15,10 @@ model User {
   updatedAt DateTime @updatedAt
   email     String?  @unique
   hash      String?
+  status    String?
 
   podcasts PodcastAnchor[]
   posts    Post[]
-  status   String?
 
   @@map("Users")
 }
@@ -40,8 +40,8 @@ model Post {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   title     String
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  Int
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String?   @db.Text
   tags      PostTag[]
 

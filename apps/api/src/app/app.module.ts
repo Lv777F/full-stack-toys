@@ -6,7 +6,10 @@ import { UsersModule } from './users/users.module';
 
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
+import {
+  ApolloServerPluginInlineTrace,
+  ApolloServerPluginLandingPageLocalDefault,
+} from 'apollo-server-core';
 import { redisStore } from 'cache-manager-redis-store';
 @Module({
   imports: [
@@ -17,7 +20,10 @@ import { redisStore } from 'cache-manager-redis-store';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       playground: false,
-      plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+      plugins: [
+        ApolloServerPluginLandingPageLocalDefault({ embed: true }),
+        ApolloServerPluginInlineTrace(),
+      ],
       autoSchemaFile: true,
     }),
     CacheModule.registerAsync({

@@ -14,12 +14,12 @@ import { CurrentUserId } from '../users/get-user.decorator';
 import { AuthService } from './auth.service';
 import { JwtRefreshAuthGuard, LocalAuthGuard } from './guard';
 
-@Resolver((of) => Credentials)
+@Resolver(() => Credentials)
 export class AuthResolver {
   constructor(private authService: AuthService) {}
 
   @UseGuards(LocalAuthGuard)
-  @Mutation((returns) => Credentials, { description: '登录' })
+  @Mutation(() => Credentials, { description: '登录' })
   login(
     @Args('loginInput') _: LoginInput,
     @CurrentUserId() userId: User['id']
@@ -27,14 +27,14 @@ export class AuthResolver {
     return this.authService.login(userId);
   }
 
-  @Mutation((returns) => Credentials, { description: '注册' })
-  signup(@Args('signUpInput') signUpInput: SignUpInput) {
+  @Mutation(() => Credentials, { description: '注册' })
+  signUp(@Args('signUpInput') signUpInput: SignUpInput) {
     return this.authService.signUp(signUpInput);
   }
 
   @UseGuards(JwtRefreshAuthGuard)
-  @Mutation((returns) => Credentials, {
-    description: '刷新 token, 需要携带 refreshToken 作为 Bearer Token',
+  @Mutation(() => Credentials, {
+    description: '刷新 Token, 需要传递 RefreshToken 作为 Bearer Token',
   })
   refresh(
     @CurrentUserId() userId: User['id'],
@@ -47,7 +47,9 @@ export class AuthResolver {
   }
 
   @UseGuards(JwtRefreshAuthGuard)
-  @Mutation((returns) => Boolean, { description: '登出' })
+  @Mutation(() => Boolean, {
+    description: '登出, 需要传递 RefreshToken 作为 Bearer Token',
+  })
   logout(@Context() context: GqlExecutionContext) {
     return this.authService
       .logout(
