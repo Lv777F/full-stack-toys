@@ -1,9 +1,8 @@
-import { SignupDTO } from '@full-stack-toys/dto';
 import {
   CACHE_MANAGER,
-  ForbiddenException,
   Inject,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -11,12 +10,12 @@ import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { Cache } from 'cache-manager';
 import { delayWhen, exhaustMap, forkJoin, from, map, tap } from 'rxjs';
-import { UserService } from '../user/user.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
+    private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheService: Cache
@@ -24,20 +23,22 @@ export class AuthService {
 
   /**
    * 校验用户名和密码
+   *
    * @param email 邮箱
    * @param password 密码
+   *
    * @returns 包含 userId 的对象, 用于 passport 携带到 req 中
    */
   validateUser(email: User['email'], password: string) {
-    return this.userService.getUserByEmail(email).pipe(
+    return this.usersService.findOneByEmail(email).pipe(
       tap((user) => {
-        if (!user) throw new ForbiddenException('邮箱或密码错误');
+        if (!user) throw new UnauthorizedException('用户名或密码错误');
       }),
       delayWhen(({ hash }) =>
         // 校验密码与 hash
         from(argon2.verify(hash, password)).pipe(
           tap((result) => {
-            if (!result) throw new ForbiddenException('邮箱或密码错误');
+            if (!result) throw new UnauthorizedException('用户名或密码错误');
           })
         )
       ),
@@ -47,7 +48,9 @@ export class AuthService {
 
   /**
    * 生成 accessToken & refreshToken
+   *
    * @param userId
+   *
    * @returns tokens
    */
   generateTokens(userId: User['id']) {
@@ -77,20 +80,27 @@ export class AuthService {
 
   /**
    * 注册
+   *
    * @param userData 注册必须信息
+   *
    * @returns tokens
    */
-  signup({ password, ...userInfo }: SignupDTO) {
+  signUp({
+    password,
+    ...userInfo
+  }: Pick<User, 'name' | 'email'> & { password: string }) {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
-      exhaustMap((hash) => this.userService.createUser({ ...userInfo, hash })),
+      exhaustMap((hash) => this.usersService.create({ ...userInfo, hash })),
       exhaustMap(({ id }) => this.login(id))
     );
   }
 
   /**
    * 登录
+   *
    * @param userId
+   *
    * @returns tokens
    */
   login(userId: User['id']) {
@@ -99,22 +109,24 @@ export class AuthService {
 
   /**
    * 刷新 token
+   *
    * @param userId
    * @param token 当前 refreshToken
+   *
    * @returns tokens
    */
   refresh(userId: User['id'], token: string) {
     return this.generateTokens(userId).pipe(
-      delayWhen(() =>
-        // 使当前使用的refreshToken失效
-        this.logout(token)
-      )
+      // 使当前使用的refreshToken失效
+      delayWhen(() => this.logout(token))
     );
   }
 
   /**
    * 失效当前 refreshToken
+   *
    * @param token
+   *
    * @returns
    */
   logout(token: string) {
@@ -124,7 +136,9 @@ export class AuthService {
 
   /**
    * 判断当前 token 是否有效 ( 不在 redis 黑名单中 )
+   *
    * @param token
+   *
    * @returns redis 查询结果
    */
   checkToken(token: string) {

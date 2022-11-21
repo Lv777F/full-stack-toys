@@ -1,15 +1,24 @@
 import { CacheModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthModule } from '../auth/auth.module';
-import { PrismaModule } from '../prisma/prisma.module';
-import { UserModule } from '../user/user.module';
+import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { UsersModule } from './users/users.module';
 
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
 import { redisStore } from 'cache-manager-redis-store';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['../../.env'],
+    }),
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      playground: false,
+      plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+      autoSchemaFile: true,
     }),
     CacheModule.registerAsync({
       isGlobal: true,
@@ -32,7 +41,7 @@ import { redisStore } from 'cache-manager-redis-store';
     }),
     PrismaModule,
     AuthModule,
-    UserModule,
+    UsersModule,
   ],
 })
 export class AppModule {}
