@@ -1,13 +1,6 @@
 import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
 import { UseGuards } from '@nestjs/common';
-import {
-  Args,
-  Context,
-  GqlExecutionContext,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { User } from '@prisma/client';
 import { map } from 'rxjs';
 import { CurrentUserId } from '../users/get-user.decorator';
@@ -36,13 +29,10 @@ export class AuthResolver {
   @Mutation(() => Credentials, {
     description: '刷新 Token, 需要传递 RefreshToken 作为 Bearer Token',
   })
-  refresh(
-    @CurrentUserId() userId: User['id'],
-    @Context() context: GqlExecutionContext
-  ) {
+  refresh(@CurrentUserId() userId: User['id'], @Context() context) {
     return this.authService.refresh(
       userId,
-      (context as any).req.header('Authorization').replace('Bearer ', '')
+      context.req.header('Authorization').replace('Bearer ', '')
     );
   }
 
@@ -50,15 +40,13 @@ export class AuthResolver {
   @Mutation(() => Boolean, {
     description: '登出, 需要传递 RefreshToken 作为 Bearer Token',
   })
-  logout(@Context() context: GqlExecutionContext) {
+  logout(@Context() context) {
     return this.authService
-      .logout(
-        (context as any).req.header('Authorization').replace('Bearer ', '')
-      )
+      .logout(context.req.header('Authorization').replace('Bearer ', ''))
       .pipe(map(() => true));
   }
 
-  @Query(() => String)
+  @Query(() => String, { deprecationReason: '没啥用, 语法要求必须有个 Query' })
   _() {
     return 'Hello stranger!';
   }
