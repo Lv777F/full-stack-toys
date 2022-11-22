@@ -1,1 +1,2 @@
-export * from './lib/auth.dto';
+export * from './lib/auth';
+export * from './lib/user';
