@@ -1,19 +1,21 @@
 import { Type } from '@nestjs/common';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 
-interface IEdgeType<T> {
+interface CursorBasedEdgeType<T> {
   cursor: string;
   node: T;
 }
 
-export interface IPaginatedType<T> {
-  edges: IEdgeType<T>[];
+export interface CursorBasedPaginatedType<T> {
+  edges: CursorBasedEdgeType<T>[];
   nodes: T[];
   totalCount: number;
   hasNextPage: boolean;
 }
 
-export function Paginated<T>(classRef: Type<T>): Type<IPaginatedType<T>> {
+export function CursorBasedPaginated<T>(
+  classRef: Type<T>
+): Type<CursorBasedPaginatedType<T>> {
   @ObjectType(`${classRef.name}Edge`)
   abstract class EdgeType {
     @Field(() => String)
@@ -24,18 +26,45 @@ export function Paginated<T>(classRef: Type<T>): Type<IPaginatedType<T>> {
   }
 
   @ObjectType({ isAbstract: true })
-  abstract class PaginatedType implements IPaginatedType<T> {
-    @Field(() => [EdgeType], { nullable: true })
+  abstract class PaginatedType implements CursorBasedPaginatedType<T> {
+    @Field(() => [EdgeType], { description: '带游标的项' })
     edges: EdgeType[];
 
-    @Field(() => [classRef], { nullable: true })
+    @Field(() => [classRef])
     nodes: T[];
 
-    @Field(() => Int)
+    @Field(() => Int, { description: '总条数' })
     totalCount: number;
 
-    @Field()
+    @Field({ description: '是否有下一页' })
     hasNextPage: boolean;
   }
-  return PaginatedType as Type<IPaginatedType<T>>;
+  return PaginatedType as Type<CursorBasedPaginatedType<T>>;
+}
+
+export interface OffsetBasedPaginatedType<T> {
+  nodes: T[];
+  totalCount: number;
+  current: number;
+  size: number;
+}
+
+export function OffsetBasedPaginated<T>(
+  classRef: Type<T>
+): Type<OffsetBasedPaginatedType<T>> {
+  @ObjectType({ isAbstract: true })
+  abstract class PaginatedType implements OffsetBasedPaginatedType<T> {
+    @Field(() => [classRef])
+    nodes: T[];
+
+    @Field(() => Int, { description: '总条数' })
+    totalCount: number;
+
+    @Field(() => Int, { description: '当前页码' })
+    current: number;
+
+    @Field(() => Int, { description: '每页条数' })
+    size: number;
+  }
+  return PaginatedType as Type<OffsetBasedPaginatedType<T>>;
 }

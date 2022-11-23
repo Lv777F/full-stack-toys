@@ -17,7 +17,7 @@ model User {
   hash      String?
   status    String?
 
-  podcasts PodcastAnchor[]
+  podcasts PodcastAuthor[]
   posts    Post[]
 
   @@map("Users")
@@ -29,8 +29,9 @@ model Podcast {
   showNote  String?         @db.Text
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
-  anchors   PodcastAnchor[]
+  authors   PodcastAuthor[]
   tags      PodcastTag[]
+  published Boolean
 
   @@map("Podcasts")
 }
@@ -44,6 +45,7 @@ model Post {
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String?   @db.Text
   tags      PostTag[]
+  published Boolean   @default(false)
 
   @@map("Posts")
 }
@@ -53,16 +55,16 @@ enum PodcastIdentity {
   Guest
 }
 
-model PodcastAnchor {
+model PodcastAuthor {
   podcastId Int
   podcast   Podcast         @relation(fields: [podcastId], references: [id], onDelete: Cascade)
-  anchorId  Int
-  anchor    User            @relation(fields: [anchorId], references: [id], onDelete: Cascade)
+  authorId  Int
+  author    User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
   identity  PodcastIdentity
   adjective String?
 
-  @@id([podcastId, anchorId])
-  @@map("PodcastAnchors")
+  @@id([podcastId, authorId])
+  @@map("PodcastAuthors")
 }
 
 model Tag {
