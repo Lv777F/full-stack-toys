@@ -1,13 +1,22 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import { catchError, from, map, pipe } from 'rxjs';
+import { catchError, filter, from, map, pipe, throwIfEmpty } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * 对用户信息进行脱敏的 rxjs 管道
  */
-const desensitize = () => pipe(map(({ hash: _, ...user }: User) => user));
+const desensitize = () =>
+  pipe(
+    filter(Boolean),
+    throwIfEmpty(() => new NotFoundException('未找到用户')),
+    map(({ hash: _, ...user }: User) => user)
+  );
 
 @Injectable()
 export class UsersService {

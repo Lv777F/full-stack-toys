@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { PaginatedPodcast } from '../podcast';
 
 @ObjectType({
   description: '用户',
@@ -16,9 +17,9 @@ export class User {
   @Field()
   createdAt: Date;
 
-  @Field()
-  updatedAt: Date;
-
   @Field({ nullable: true, description: '当前状态' })
   status?: string;
+
+  @Field(() => PaginatedPodcast)
+  podcasts: PaginatedPodcast;
 }
