@@ -15,6 +15,6 @@ export class Tag {
   @Field()
   updatedAt: Date;
 
-  @Field(() => [Podcast])
-  podcasts: Podcast[];
+  @Field(() => [Podcast], { nullable: true })
+  podcasts?: Podcast[];
 }

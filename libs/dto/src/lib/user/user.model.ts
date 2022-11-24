@@ -17,9 +17,6 @@ export class User {
   @Field()
   createdAt: Date;
 
-  @Field()
-  updatedAt: Date;
-
   @Field({ nullable: true, description: '当前状态' })
   status?: string;
 

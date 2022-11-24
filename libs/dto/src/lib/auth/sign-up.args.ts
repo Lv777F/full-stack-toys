@@ -1,4 +1,4 @@
-import { ArgsType, Field, InputType } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
 @InputType({ description: '注册所需信息' })
@@ -16,10 +16,4 @@ export class SignUpInput {
   @IsString()
   @MaxLength(20)
   name: string;
-}
-
-@ArgsType()
-export class SignUpArgs {
-  @Field()
-  signUpInput: SignUpInput;
 }

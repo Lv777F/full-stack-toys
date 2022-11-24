@@ -1,13 +1,7 @@
 import { Type } from '@nestjs/common';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 
-interface CursorBasedEdgeType<T> {
-  cursor: string;
-  node: T;
-}
-
 export interface CursorBasedPaginatedType<T> {
-  edges: CursorBasedEdgeType<T>[];
   nodes: T[];
   totalCount: number;
   hasNextPage: boolean;
@@ -16,20 +10,8 @@ export interface CursorBasedPaginatedType<T> {
 export function CursorBasedPaginated<T>(
   classRef: Type<T>
 ): Type<CursorBasedPaginatedType<T>> {
-  @ObjectType(`${classRef.name}Edge`)
-  abstract class EdgeType {
-    @Field(() => String)
-    cursor: string;
-
-    @Field(() => classRef)
-    node: T;
-  }
-
   @ObjectType({ isAbstract: true })
   abstract class PaginatedType implements CursorBasedPaginatedType<T> {
-    @Field(() => [EdgeType], { description: '带游标的项' })
-    edges: EdgeType[];
-
     @Field(() => [classRef])
     nodes: T[];
 
