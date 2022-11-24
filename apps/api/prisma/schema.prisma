@@ -24,28 +24,30 @@ model User {
 }
 
 model Podcast {
-  id        Int             @id @default(autoincrement())
-  title     String
-  showNote  String?         @db.Text
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  authors   PodcastAuthor[]
-  tags      PodcastTag[]
-  published Boolean
+  id          Int             @id @default(autoincrement())
+  title       String
+  showNote    String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  authors     PodcastAuthor[]
+  tags        PodcastTag[]
+  published   Boolean         @default(false)
+  publishedAt DateTime?
 
   @@map("Podcasts")
 }
 
 model Post {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  title     String
-  authorId  Int
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String?   @db.Text
-  tags      PostTag[]
-  published Boolean   @default(false)
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  title       String
+  authorId    Int
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String?   @db.Text
+  tags        PostTag[]
+  published   Boolean   @default(false)
+  publishedAt DateTime?
 
   @@map("Posts")
 }
@@ -69,7 +71,7 @@ model PodcastAuthor {
 
 model Tag {
   id        Int          @id @default(autoincrement())
-  name      String
+  name      String       @unique
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   podcasts  PodcastTag[]
