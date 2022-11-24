@@ -24,7 +24,7 @@ export class PodcastsService {
   getPaginatedPodcasts(
     { cursor, limit = 5 }: CursorBasedPaginationInput,
     relations: string[],
-    where: Prisma.PodcastWhereInput,
+    where?: Prisma.PodcastWhereInput,
     orderBy: Prisma.PodcastOrderByWithAggregationInput = { id: 'desc' }
   ) {
     return forkJoin([

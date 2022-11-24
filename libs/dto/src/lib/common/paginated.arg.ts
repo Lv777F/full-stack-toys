@@ -1,4 +1,4 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, registerEnumType } from '@nestjs/graphql';
 
 @InputType()
 export class CursorBasedPaginationInput {
@@ -17,3 +17,21 @@ export class OffsetBasedPaginationInput {
   @Field({ nullable: true, description: '页码', defaultValue: 1 })
   current?: number;
 }
+
+export enum SortOrder {
+  asc = 'asc',
+  desc = 'desc',
+}
+
+registerEnumType(SortOrder, {
+  name: 'SortOrder',
+  description: '排序方式',
+  valuesMap: {
+    asc: {
+      description: '递增',
+    },
+    desc: {
+      description: '递减',
+    },
+  },
+});
