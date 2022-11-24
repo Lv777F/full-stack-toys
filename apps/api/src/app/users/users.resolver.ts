@@ -1,5 +1,5 @@
 import { PaginatedPodcast, User } from '@full-stack-toys/dto';
-import { HasFields, Selections } from '@jenyus-org/nestjs-graphql-utils';
+import { Selections } from '@jenyus-org/nestjs-graphql-utils';
 import { UseGuards } from '@nestjs/common';
 import {
   Args,
@@ -9,7 +9,6 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { forkJoin, map } from 'rxjs';
 import { JwtAuthGuard } from '../auth/guard';
 import { PodcastsService } from '../podcasts/podcasts.service';
 import { CurrentUserId } from './get-user.decorator';
@@ -36,28 +35,18 @@ export class UsersResolver {
 
   @ResolveField(() => PaginatedPodcast, { description: '用户相关播客' })
   podcasts(
-    @Parent() user: User,
+    @Parent() { id: userId }: User,
     @Args('limit', { type: () => Int, defaultValue: 5, nullable: true })
     limit: number,
-    @Selections('podcasts.nodes', ['**']) relations: string[],
-    @HasFields('podcasts.totalCount') withTotalCount: boolean
+    @Selections('podcasts.nodes', ['**']) relations: string[]
   ) {
-    const whereInput = {
+    return this.podcastsService.getPaginatedPodcasts({ limit }, relations, {
       published: true,
       authors: {
         some: {
-          authorId: user.id,
+          authorId: userId,
         },
       },
-    };
-    return forkJoin([
-      this.podcastsService.findMany({ limit }, relations, whereInput),
-      ...(withTotalCount ? [this.podcastsService.count(whereInput)] : []),
-    ]).pipe(
-      map(([data, totalCount = 0]) => ({
-        ...data,
-        totalCount,
-      }))
-    );
+    });
   }
 }
