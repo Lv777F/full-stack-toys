@@ -15,6 +15,7 @@ export class PodcastWhereInput {
   @Field(() => [Int], { nullable: true })
   includeAuthors: number[];
 
+  // TODO 解决 Graphql 数组项 nullable 设置
   @Field(() => [Date], { nullable: true })
   publishedDateRange: [Date?, Date?];
 }
