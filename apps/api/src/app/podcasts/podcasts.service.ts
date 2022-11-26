@@ -24,7 +24,7 @@ export class PodcastsService {
   getPaginatedPodcasts(
     { cursor, limit = 5 }: CursorBasedPaginationInput,
     relations: string[],
-    where: Prisma.PodcastWhereInput,
+    where?: Prisma.PodcastWhereInput,
     orderBy: Prisma.PodcastOrderByWithAggregationInput = { id: 'desc' }
   ) {
     return forkJoin([
@@ -45,6 +45,7 @@ export class PodcastsService {
           },
         })
       ),
+      // prisma 不支持查询同时统计
       from(this.prisma.podcast.count({ where })),
     ]).pipe(
       map(([nodes, totalCount]) => ({
@@ -52,6 +53,22 @@ export class PodcastsService {
         hasNextPage: !!nodes[limit + 1],
         totalCount,
       }))
+    );
+  }
+
+  findOne(id: number, relations: string[]) {
+    return from(
+      this.prisma.podcast.findUnique({
+        where: { id },
+        include: {
+          authors: relations.includes('authors') && PODCAST_INCLUDE_AUTHORS_ARG,
+          tags: relations.includes('tags') && {
+            include: {
+              tag: true,
+            },
+          },
+        },
+      })
     );
   }
 }
