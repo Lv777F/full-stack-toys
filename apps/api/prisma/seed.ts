@@ -69,6 +69,7 @@ async function main() {
     await prisma.podcast.create({
       data: {
         ...podcast,
+        publishedAt: new Date(),
         authors: {
           createMany: {
             data: users.map(({ id: userId }) => ({

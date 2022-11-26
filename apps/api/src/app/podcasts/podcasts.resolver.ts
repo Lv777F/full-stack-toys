@@ -1,11 +1,12 @@
 import {
   CursorBasedPaginationInput,
   PaginatedPodcast,
+  Podcast,
   PodcastOrderByInput,
   PodcastWhereInput,
 } from '@full-stack-toys/dto';
 import { Selections } from '@jenyus-org/nestjs-graphql-utils';
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Int, Query, Resolver } from '@nestjs/graphql';
 import { Prisma } from '@prisma/client';
 import { PodcastsService } from './podcasts.service';
 
@@ -23,7 +24,7 @@ const whereMap: Record<
       },
     ],
   }),
-  includeAuthors: (authorIds: number[]) => ({
+  authors: (authorIds: number[]) => ({
     AND: authorIds.map((authorId) => ({
       authors: {
         some: {
@@ -32,7 +33,7 @@ const whereMap: Record<
       },
     })),
   }),
-  includeTags: (tagIds: number[]) => ({
+  tags: (tagIds: number[]) => ({
     AND: tagIds.map((tagId) => ({
       tags: {
         some: {
@@ -41,7 +42,7 @@ const whereMap: Record<
       },
     })),
   }),
-  publishedDateRange: ([startDate, endDate]: [Date, Date]) => ({
+  publishedDate: ([startDate, endDate]: [Date, Date]) => ({
     publishedAt: {
       ...(startDate ? { gte: startDate } : {}),
       ...(endDate ? { lte: endDate } : {}),
@@ -57,8 +58,7 @@ export class PodcastsResolver {
   podcasts(
     @Args('pagination') pagination: CursorBasedPaginationInput,
     @Selections('podcasts.nodes', ['**']) relations: string[],
-    @Args('filters', { nullable: true })
-    whereInput?: PodcastWhereInput,
+    @Args('filters', { nullable: true }) whereInput?: PodcastWhereInput,
     @Args('sorts', { nullable: true }) orderBy?: PodcastOrderByInput
   ) {
     return this.podcastsService.getPaginatedPodcasts(
@@ -72,5 +72,14 @@ export class PodcastsResolver {
       },
       orderBy
     );
+  }
+
+  @Query(() => Podcast, { description: '获取指定播客数据' })
+  podcast(
+    @Args('id', { type: () => Int }) id: number,
+    @Selections('podcast', ['**']) relations: string[]
+  ) {
+    // TODO 未发布播客权限验证
+    return this.podcastsService.findOne(id, relations);
   }
 }
