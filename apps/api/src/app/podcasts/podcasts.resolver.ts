@@ -10,9 +10,11 @@ import { Args, Int, Query, Resolver } from '@nestjs/graphql';
 import { Prisma } from '@prisma/client';
 import { PodcastsService } from './podcasts.service';
 
-const whereMap: Record<
-  keyof PodcastWhereInput,
-  (v: PodcastWhereInput[keyof PodcastWhereInput]) => Prisma.PodcastWhereInput
+const whereMap: Partial<
+  Record<
+    keyof PodcastWhereInput,
+    (v: PodcastWhereInput[keyof PodcastWhereInput]) => Prisma.PodcastWhereInput
+  >
 > = {
   keyword: (contains: string) => ({
     OR: [
@@ -65,10 +67,9 @@ export class PodcastsResolver {
       pagination,
       relations,
       {
-        AND: Object.entries(whereInput ?? {}).map(([key, value]) =>
-          whereMap[key](value)
+        AND: Object.entries(whereInput ?? {}).map(
+          ([key, value]) => whereMap[key]?.(value) ?? { [key]: value }
         ),
-        published: true,
       },
       orderBy
     );

@@ -9,6 +9,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
 import { redisStore } from 'cache-manager-redis-store';
 import { PodcastsModule } from './podcasts/podcasts.module';
+import { CaslModule } from './casl/casl.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +45,7 @@ import { PodcastsModule } from './podcasts/podcasts.module';
     AuthModule,
     UsersModule,
     PodcastsModule,
+    CaslModule,
   ],
 })
 export class AppModule {}
