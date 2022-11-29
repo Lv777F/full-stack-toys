@@ -9,7 +9,6 @@ export type RequestUser = Pick<User, 'id' | 'roles'>;
  */
 export const CurrentUser = createParamDecorator(
   (key: keyof RequestUser | undefined, context: ExecutionContext) => {
-    // TODO 为啥获取不到了!!!???
     const { user } = GqlExecutionContext.create(context).getContext().req;
     return key ? user[key] : user;
   }
