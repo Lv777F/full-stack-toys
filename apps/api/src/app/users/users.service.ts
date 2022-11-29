@@ -81,6 +81,7 @@ export class UsersService {
         select: {
           hash: true,
           id: true,
+          roles: true,
         },
       })
     );

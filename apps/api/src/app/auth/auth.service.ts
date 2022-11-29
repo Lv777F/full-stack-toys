@@ -10,6 +10,7 @@ import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { Cache } from 'cache-manager';
 import { delayWhen, exhaustMap, forkJoin, from, map, tap } from 'rxjs';
+import { RequestUser } from '../users/get-user.decorator';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -42,7 +43,7 @@ export class AuthService {
           })
         )
       ),
-      map(({ id }) => ({ id }))
+      map(({ id, roles }) => ({ id, roles }))
     );
   }
 
@@ -53,11 +54,11 @@ export class AuthService {
    *
    * @returns tokens
    */
-  generateTokens(userId: User['id']) {
+  generateTokens({ id: userId, roles }: RequestUser) {
     return forkJoin([
       from(
         this.jwtService.signAsync(
-          { sub: userId },
+          { sub: userId, roles },
           {
             secret: this.configService.get('JWT_SECRET'),
             expiresIn: this.configService.get('JWT_EXPIRES_IN'),
@@ -92,19 +93,19 @@ export class AuthService {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
       exhaustMap((hash) => this.usersService.create({ ...userInfo, hash })),
-      exhaustMap(({ id }) => this.login(id))
+      exhaustMap(({ id, roles }) => this.login({ id, roles }))
     );
   }
 
   /**
    * 登录
    *
-   * @param userId
+   * @param user
    *
    * @returns tokens
    */
-  login(userId: User['id']) {
-    return this.generateTokens(userId);
+  login(user: RequestUser) {
+    return this.generateTokens(user);
   }
 
   /**
@@ -116,8 +117,10 @@ export class AuthService {
    * @returns tokens
    */
   refresh(userId: User['id'], token: string) {
-    return this.generateTokens(userId).pipe(
-      // 使当前使用的refreshToken失效
+    // 重新获取用户 roles 并授权
+    return this.usersService.findOne(userId).pipe(
+      exhaustMap(({ roles }) => this.generateTokens({ id: userId, roles })),
+      // 使当前使用的 refreshToken 失效
       delayWhen(() => this.logout(token))
     );
   }

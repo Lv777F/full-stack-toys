@@ -5,6 +5,7 @@ import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { lastValueFrom, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { RequestUser } from '../../users/get-user.decorator';
 import { AuthService } from '../auth.service';
 
 @Injectable()
@@ -21,7 +22,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     });
   }
 
-  validate(req: Request, { sub: id }: { sub: number }) {
+  validate(req: Request, { sub: id }: { sub: RequestUser['id'] }) {
     return lastValueFrom(
       this.authService
         .checkToken(req.get('Authorization').replace('Bearer ', ''))

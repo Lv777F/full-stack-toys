@@ -11,7 +11,7 @@ import {
 } from '@nestjs/graphql';
 import { JwtAuthGuard } from '../auth/guard';
 import { PodcastsService } from '../podcasts/podcasts.service';
-import { CurrentUserId } from './get-user.decorator';
+import { CurrentUser } from './get-user.decorator';
 import { UsersService } from './users.service';
 @Resolver(() => User)
 export class UsersResolver {
@@ -22,7 +22,7 @@ export class UsersResolver {
 
   @UseGuards(JwtAuthGuard)
   @Query(() => User, { description: '当前账号的用户信息' })
-  me(@CurrentUserId() userId: User['id']) {
+  me(@CurrentUser('id') userId: User['id']) {
     return this.usersService.findOne(userId);
   }
 

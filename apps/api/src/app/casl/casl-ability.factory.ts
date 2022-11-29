@@ -30,7 +30,6 @@ export class CaslAbilityFactory {
     can(Action.Read, 'User');
 
     if (user) {
-      // TODO 添加 roles 到 jwt
       can(Action.Update, 'User', { id: user.id });
 
       can([Action.Read, Action.Update], 'Podcast', {

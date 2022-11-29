@@ -1,9 +1,8 @@
 import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
 import { UseGuards } from '@nestjs/common';
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { User } from '@prisma/client';
 import { map } from 'rxjs';
-import { CurrentUserId } from '../users/get-user.decorator';
+import { CurrentUser, RequestUser } from '../users/get-user.decorator';
 import { AuthService } from './auth.service';
 import { JwtRefreshAuthGuard, LocalAuthGuard } from './guard';
 
@@ -13,11 +12,8 @@ export class AuthResolver {
 
   @UseGuards(LocalAuthGuard)
   @Mutation(() => Credentials, { description: '登录' })
-  login(
-    @Args('loginInput') _: LoginInput,
-    @CurrentUserId() userId: User['id']
-  ) {
-    return this.authService.login(userId);
+  login(@Args('loginInput') _: LoginInput, @CurrentUser() user: RequestUser) {
+    return this.authService.login(user);
   }
 
   @Mutation(() => Credentials, { description: '注册' })
@@ -29,7 +25,7 @@ export class AuthResolver {
   @Mutation(() => Credentials, {
     description: '刷新 Token, 需要传递 RefreshToken 作为 Bearer Token',
   })
-  refresh(@CurrentUserId() userId: User['id'], @Context() context) {
+  refresh(@CurrentUser('id') userId: RequestUser['id'], @Context() context) {
     return this.authService.refresh(
       userId,
       context.req.header('Authorization').replace('Bearer ', '')
