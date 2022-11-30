@@ -10,8 +10,8 @@ import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { Cache } from 'cache-manager';
 import { delayWhen, exhaustMap, forkJoin, from, map, tap } from 'rxjs';
-import { RequestUser } from '../users/get-user.decorator';
 import { UsersService } from '../users/users.service';
+import { RequestUser } from './decorator';
 
 @Injectable()
 export class AuthService {

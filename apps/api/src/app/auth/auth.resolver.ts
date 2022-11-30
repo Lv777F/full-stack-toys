@@ -2,8 +2,8 @@ import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
 import { UseGuards } from '@nestjs/common';
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { map } from 'rxjs';
-import { CurrentUser, RequestUser } from '../users/get-user.decorator';
 import { AuthService } from './auth.service';
+import { CurrentUser, RequestUser } from './decorator';
 import { JwtRefreshAuthGuard, LocalAuthGuard } from './guard';
 
 @Resolver(() => Credentials)

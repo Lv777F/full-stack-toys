@@ -5,8 +5,8 @@ import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { lastValueFrom, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { RequestUser } from '../../users/get-user.decorator';
 import { AuthService } from '../auth.service';
+import { RequestUser } from '../decorator';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(

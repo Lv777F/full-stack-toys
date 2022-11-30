@@ -1,7 +1,7 @@
 import { AbilityBuilder, PureAbility } from '@casl/ability';
 import { createPrismaAbility, PrismaQuery, Subjects } from '@casl/prisma';
 import { Injectable } from '@nestjs/common';
-import { Podcast, Post, Tag, User } from '@prisma/client';
+import { Podcast, Post, Role, Tag, User } from '@prisma/client';
 
 export enum Action {
   Manage = 'manage',
@@ -32,9 +32,15 @@ export class CaslAbilityFactory {
     if (user) {
       can(Action.Update, 'User', { id: user.id });
 
-      can([Action.Read, Action.Update], 'Podcast', {
-        authors: { some: { authorId: { equals: user.id } } },
-      });
+      if (user.roles.includes(Role.Contributor)) {
+        can([Action.Read, Action.Update], 'Podcast', {
+          authors: { some: { authorId: { equals: user.id } } },
+        });
+      }
+
+      if (user.roles.includes(Role.Admin)) {
+        can(Action.Manage, 'all');
+      }
     }
 
     return build();

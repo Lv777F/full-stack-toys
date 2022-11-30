@@ -4,19 +4,6 @@ import { Prisma } from '@prisma/client';
 import { forkJoin, from, map } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
-const PODCAST_INCLUDE_AUTHORS_ARG: Prisma.PodcastAuthorFindManyArgs = {
-  include: {
-    author: {
-      select: {
-        id: true,
-        name: true,
-        profile: true,
-        status: true,
-      },
-    },
-  },
-};
-
 @Injectable()
 export class PodcastsService {
   constructor(private prisma: PrismaService) {}
@@ -35,8 +22,18 @@ export class PodcastsService {
           where,
           orderBy,
           include: {
-            authors:
-              relations.includes('authors') && PODCAST_INCLUDE_AUTHORS_ARG,
+            authors: relations.includes('authors') && {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    profile: true,
+                    status: true,
+                  },
+                },
+              },
+            },
             tags: relations.includes('tags') && {
               include: {
                 tag: true,
@@ -58,10 +55,21 @@ export class PodcastsService {
 
   findOne(id: number, relations: string[]) {
     return from(
-      this.prisma.podcast.findUnique({
+      this.prisma.podcast.findFirst({
         where: { id },
         include: {
-          authors: relations.includes('authors') && PODCAST_INCLUDE_AUTHORS_ARG,
+          authors: {
+            include: {
+              author: relations.includes('authors') && {
+                select: {
+                  id: true,
+                  name: true,
+                  profile: true,
+                  status: true,
+                },
+              },
+            },
+          },
           tags: relations.includes('tags') && {
             include: {
               tag: true,

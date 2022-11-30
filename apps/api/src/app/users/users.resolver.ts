@@ -9,9 +9,9 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { CurrentUser } from '../auth/decorator';
 import { JwtAuthGuard } from '../auth/guard';
 import { PodcastsService } from '../podcasts/podcasts.service';
-import { CurrentUser } from './get-user.decorator';
 import { UsersService } from './users.service';
 @Resolver(() => User)
 export class UsersResolver {
