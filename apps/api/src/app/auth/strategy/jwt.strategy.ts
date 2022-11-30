@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { environment } from '../../../environments/environment';
+import { RequestUser } from '../decorator';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate({ sub: id }: { sub: number }) {
-    return { id };
+  validate({ sub: id, roles }: { sub: number; roles: RequestUser['roles'] }) {
+    return { id, roles };
   }
 }

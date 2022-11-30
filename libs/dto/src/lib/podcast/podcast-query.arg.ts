@@ -15,9 +15,11 @@ export class PodcastWhereInput {
   @Field(() => [Int], { nullable: true })
   authors: number[];
 
-  // TODO 解决 Graphql 数组项 nullable 设置
   @Field(() => [Date], { nullable: 'itemsAndList' })
   publishedDate: [Date?, Date?];
+
+  @Field({ nullable: true, defaultValue: true })
+  published: boolean;
 }
 
 @InputType()

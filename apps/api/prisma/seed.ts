@@ -1,4 +1,4 @@
-import { PodcastIdentity, PrismaClient } from '@prisma/client';
+import { PodcastIdentity, PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 const prisma = new PrismaClient();
 
@@ -24,14 +24,17 @@ const userData = [
   {
     name: 'franky',
     email: 'q404023244@gmail.com',
+    roles: [Role.Admin],
   },
   {
     name: 'cabbage',
     email: 'test1@gmail.com',
+    roles: [Role.Contributor],
   },
   {
     name: 'xinbao',
     email: 'test2@gmail.com',
+    roles: [Role.Admin],
   },
 ];
 
