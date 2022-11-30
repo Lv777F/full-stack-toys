@@ -4,19 +4,34 @@ const prisma = new PrismaClient();
 
 const podcastData = [
   {
-    title: 'podcast1',
+    title: '第一期',
     published: true,
-    showNote: 'showNote1',
+    showNote: '第一期',
   },
   {
-    title: 'podcast2',
-    published: true,
-    showNote: 'showNote2',
+    title: '第二期',
+    published: false,
+    showNote: '第二期',
   },
   {
-    title: 'podcast3',
+    title: '第三期',
     published: true,
-    showNote: 'showNote3',
+    showNote: '第三期',
+  },
+  {
+    title: '第四期',
+    published: true,
+    showNote: '第四期',
+  },
+  {
+    title: '第五期',
+    published: true,
+    showNote: '第五期',
+  },
+  {
+    title: '第六期',
+    published: false,
+    showNote: '第六期',
   },
 ];
 
@@ -36,6 +51,11 @@ const userData = [
     email: 'test2@gmail.com',
     roles: [Role.Admin],
   },
+  {
+    name: 'normal',
+    email: 'test3@gmail.com',
+    roles: [],
+  },
 ];
 
 const tagData = [
@@ -44,6 +64,9 @@ const tagData = [
   },
   { name: 'HTML' },
   { name: 'CSS' },
+  { name: 'Vue' },
+  { name: 'React' },
+  { name: 'Angular' },
 ];
 
 async function main() {
@@ -69,26 +92,33 @@ async function main() {
     })
     .then(() => prisma.tag.findMany());
   podcastData.forEach(async (podcast) => {
+    const date = new Date();
+    date.setDate(date.getDate() - Math.random() * 20);
     await prisma.podcast.create({
       data: {
         ...podcast,
-        publishedAt: new Date(),
+        publishedAt: date,
         authors: {
           createMany: {
-            data: users.map(({ id: userId }) => ({
-              authorId: userId,
-              identity:
-                Math.random() > 0.5
-                  ? PodcastIdentity.Guest
-                  : PodcastIdentity.Host,
-            })),
+            data: users
+              .filter(({ roles }) => roles.length > 0)
+              .flatMap((item) => (Math.random() > 0.3 ? [item] : []))
+              .map(({ id: userId }) => ({
+                authorId: userId,
+                identity:
+                  Math.random() > 0.5
+                    ? PodcastIdentity.Guest
+                    : PodcastIdentity.Host,
+              })),
           },
         },
         tags: {
           createMany: {
-            data: tags.map(({ id: tagId }) => ({
-              tagId,
-            })),
+            data: tags
+              .flatMap((item) => (Math.random() > 0.5 ? [item] : []))
+              .map(({ id: tagId }) => ({
+                tagId,
+              })),
           },
         },
       },
