@@ -1,11 +1,20 @@
+import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import { catchError, filter, from, map, pipe, throwIfEmpty } from 'rxjs';
+import {
+  catchError,
+  filter,
+  forkJoin,
+  from,
+  map,
+  pipe,
+  throwIfEmpty,
+} from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -57,7 +66,7 @@ export class UsersService {
    */
   findOne(id: User['id']) {
     return from(
-      this.prisma.user.findUnique({
+      this.prisma.user.findUniqueOrThrow({
         where: {
           id,
         },
@@ -84,6 +93,33 @@ export class UsersService {
           roles: true,
         },
       })
+    );
+  }
+
+  getPaginatedUsers(
+    { size, current }: OffsetBasedPaginationInput,
+    where?: Prisma.UserWhereInput,
+    orderBy: Prisma.UserOrderByWithRelationAndSearchRelevanceInput = {
+      id: 'desc',
+    }
+  ) {
+    return forkJoin([
+      from(
+        this.prisma.user.findMany({
+          orderBy,
+          take: size,
+          skip: size * (current - 1),
+          where,
+        })
+      ),
+      from(this.prisma.user.count({ where })),
+    ]).pipe(
+      map(([nodes, totalCount]) => ({
+        nodes,
+        totalCount,
+        current,
+        size,
+      }))
     );
   }
 }

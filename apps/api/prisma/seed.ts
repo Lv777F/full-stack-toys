@@ -16,19 +16,21 @@ const userData = [
   },
   {
     name: 'cabbage',
-    email: 'test1@gmail.com',
+    email: 'cabbage@gmail.com',
     roles: [Role.Contributor],
   },
   {
     name: 'xinbao',
-    email: 'test2@gmail.com',
+    email: 'xinbao@gmail.com',
     roles: [Role.Admin],
   },
-  {
-    name: 'normal',
-    email: 'test3@gmail.com',
-    roles: [],
-  },
+  ...Array(30)
+    .fill(null)
+    .map((_, i) => ({
+      name: `测试用户 ${i + 1}`,
+      email: `test${i + 1}@gmail.com`,
+      roles: Math.random() > 0.8 ? [Role.Contributor] : [],
+    })),
 ];
 
 const tagData = [

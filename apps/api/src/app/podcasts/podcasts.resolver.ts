@@ -2,7 +2,7 @@ import { subject } from '@casl/ability';
 import { accessibleBy } from '@casl/prisma';
 import {
   CursorBasedPaginationInput,
-  PaginatedPodcast,
+  PaginatedPodcasts,
   Podcast,
   PodcastOrderByInput,
   PodcastWhereInput,
@@ -64,11 +64,11 @@ const whereMap: Partial<
 export class PodcastsResolver {
   constructor(
     private podcastsService: PodcastsService,
-    private caslAbilityFactory: CaslAbilityFactory
+    private abilityFactory: CaslAbilityFactory
   ) {}
 
   @AllowAnonymous()
-  @Query(() => PaginatedPodcast, { description: '分页获取播客数据' })
+  @Query(() => PaginatedPodcasts, { description: '分页获取播客数据' })
   podcasts(
     @Args('pagination') pagination: CursorBasedPaginationInput,
     @Selections('podcasts.nodes', ['**']) relations: string[],
@@ -84,7 +84,7 @@ export class PodcastsResolver {
           ...Object.entries(whereInput ?? {}).map(
             ([key, value]) => whereMap[key]?.(value) ?? { [key]: value }
           ),
-          accessibleBy(this.caslAbilityFactory.createAbility(user), Action.Read)
+          accessibleBy(this.abilityFactory.createAbility(user), Action.Read)
             .Podcast,
         ],
       },
@@ -102,11 +102,11 @@ export class PodcastsResolver {
     return this.podcastsService.findOne(id, relations).pipe(
       tap((podcast) => {
         if (
-          this.caslAbilityFactory
+          this.abilityFactory
             .createAbility(user)
             .cannot(Action.Read, subject('Podcast', podcast))
         )
-          throw new ForbiddenException('权限不足');
+          throw new ForbiddenException('无权读取指定播客');
       })
     );
   }

@@ -6,7 +6,7 @@ import { SortOrder } from '../common';
 export class PodcastWhereInput {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @Field({ nullable: true })
+  @Field({ nullable: true, description: '根据 title 或 showNote 匹配' })
   keyword?: string;
 
   @Field(() => [Int], { nullable: true })
