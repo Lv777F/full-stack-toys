@@ -1,20 +1,7 @@
 import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import {
-  catchError,
-  filter,
-  forkJoin,
-  from,
-  map,
-  pipe,
-  throwIfEmpty,
-} from 'rxjs';
+import { filter, forkJoin, from, map, pipe, throwIfEmpty } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -38,23 +25,14 @@ export class UsersService {
    *
    * @returns 脱敏用户信息
    */
-  create(user: Pick<User, 'email' | 'name'> & { hash?: User['hash'] }) {
+  create(user: Prisma.UserCreateInput) {
     return from(
       this.prisma.user.create({
         data: {
           ...user,
         },
       })
-    ).pipe(
-      catchError((err) => {
-        if (err instanceof PrismaClientKnownRequestError) {
-          // P2002 为 prisma 的 unique 规则报错
-          if (err.code === 'P2002') throw new BadRequestException('邮箱已注册');
-        }
-        throw err;
-      }),
-      desensitize()
-    );
+    ).pipe(desensitize());
   }
 
   /**
@@ -77,13 +55,13 @@ export class UsersService {
   /**
    * 根据邮箱获取指定用户信息 (用于账号密码登陆校验)
    *
-   * @param email
+   * @param email 📫
    *
    * @returns 用户 id 和 hash
    */
   findOneByEmail(email: User['email']) {
     return from(
-      this.prisma.user.findUnique({
+      this.prisma.user.findUniqueOrThrow({
         where: {
           email,
         },
@@ -96,6 +74,15 @@ export class UsersService {
     );
   }
 
+  /**
+   * 获取用户列表
+   *
+   * @param pagination 分页器
+   * @param where ❓查询条件
+   * @param orderBy 排序规则
+   *
+   * @returns 分页( offset )用户数据
+   */
   getPaginatedUsers(
     { size, current }: OffsetBasedPaginationInput,
     where?: Prisma.UserWhereInput,

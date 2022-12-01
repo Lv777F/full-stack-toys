@@ -1,7 +1,8 @@
 import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
-import { UseGuards } from '@nestjs/common';
-import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { map } from 'rxjs';
+import { BadRequestException, UseGuards } from '@nestjs/common';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { catchError, map } from 'rxjs';
 import { AuthService } from './auth.service';
 import { CurrentUser, RequestUser } from './decorator';
 import { JwtRefreshAuthGuard, LocalAuthGuard } from './guard';
@@ -18,7 +19,16 @@ export class AuthResolver {
 
   @Mutation(() => Credentials, { description: '注册' })
   signUp(@Args('signUpInput') signUpInput: SignUpInput) {
-    return this.authService.signUp(signUpInput);
+    return this.authService.signUp(signUpInput).pipe(
+      catchError((err) => {
+        if (
+          err instanceof PrismaClientKnownRequestError &&
+          err.code === 'P2002'
+        )
+          throw new BadRequestException('邮箱已注册');
+        throw err;
+      })
+    );
   }
 
   @UseGuards(JwtRefreshAuthGuard)
@@ -40,10 +50,5 @@ export class AuthResolver {
     return this.authService
       .logout(context.req.header('Authorization').replace('Bearer ', ''))
       .pipe(map(() => true));
-  }
-
-  @Query(() => String, { deprecationReason: '没啥用, 语法要求必须有个 Query' })
-  _() {
-    return 'Hello stranger!';
   }
 }

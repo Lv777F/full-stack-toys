@@ -43,7 +43,6 @@ export class PodcastsService {
           },
         })
       ),
-      // prisma 不支持查询同时统计
       from(this.prisma.podcast.count({ where })),
     ]).pipe(
       map(([nodes, totalCount]) => ({
@@ -56,7 +55,7 @@ export class PodcastsService {
 
   findOne(id: number, relations: string[]) {
     return from(
-      this.prisma.podcast.findFirst({
+      this.prisma.podcast.findUniqueOrThrow({
         where: { id },
         include: {
           authors: {
