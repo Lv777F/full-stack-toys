@@ -1,7 +1,9 @@
 import { Field, InputType, registerEnumType } from '@nestjs/graphql';
+import { Max } from 'class-validator';
 
 @InputType()
 export class CursorBasedPaginationInput {
+  @Max(50)
   @Field({ description: '每页条数' })
   limit: number;
 
@@ -11,6 +13,7 @@ export class CursorBasedPaginationInput {
 
 @InputType()
 export class OffsetBasedPaginationInput {
+  @Max(50)
   @Field({ description: '每页条数' })
   size: number;
 

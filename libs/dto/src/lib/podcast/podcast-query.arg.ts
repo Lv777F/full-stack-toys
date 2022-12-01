@@ -18,7 +18,7 @@ export class PodcastWhereInput {
   @Field(() => [Date], { nullable: 'itemsAndList' })
   publishedDate: [Date?, Date?];
 
-  @Field({ nullable: true, defaultValue: true })
+  @Field({ nullable: true })
   published: boolean;
 }
 
