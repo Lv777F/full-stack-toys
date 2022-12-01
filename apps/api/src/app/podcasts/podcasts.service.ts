@@ -19,6 +19,7 @@ export class PodcastsService {
         this.prisma.podcast.findMany({
           skip: cursor ? 1 : 0,
           take: limit + 1,
+          cursor: cursor ? { id: +cursor } : undefined,
           where,
           orderBy,
           include: {
@@ -47,7 +48,7 @@ export class PodcastsService {
     ]).pipe(
       map(([nodes, totalCount]) => ({
         nodes: nodes.slice(0, limit),
-        hasNextPage: !!nodes[limit + 1],
+        hasNextPage: !!nodes[limit],
         totalCount,
       }))
     );
