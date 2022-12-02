@@ -22,9 +22,9 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
             (err instanceof PrismaClientKnownRequestError &&
               err.code === 'P2025') ||
             err instanceof ValidationError
-          ) {
+          )
             throw new UnauthorizedException('用户名或密码错误');
-          }
+
           throw err;
         })
       )

@@ -30,26 +30,23 @@ export class CaslAbilityFactory {
     can(Action.Read, 'User', ['id', 'name', 'profile', 'status', 'roles']);
 
     if (user) {
-      if (user.roles.includes(Role.Admin)) {
-        can(Action.Manage, 'all');
-      } else {
-        can(Action.Read, 'User', ['email', 'createdAt', 'updatedAt'], {
-          id: user.id,
-        });
-        can(Action.Update, 'User', ['email', 'name', 'profile', 'status'], {
-          id: user.id,
-        });
+      can(Action.Read, 'User', ['email'], {
+        id: user.id,
+      });
+      can(Action.Update, 'User', {
+        id: user.id,
+      });
+      cannot(Action.Update, 'User', ['roles']);
 
-        if (user.roles.includes(Role.Contributor)) {
-          can(
-            [Action.Read, Action.Update],
-            'Podcast',
-            ['published', 'showNote', 'title'],
-            {
-              authors: { some: { authorId: { equals: user.id } } },
-            }
-          );
-        }
+      if (user.roles.includes(Role.Contributor)) {
+        can([Action.Read, Action.Update], 'Podcast', {
+          authors: { some: { authorId: { equals: user.id } } },
+        });
+      }
+
+      if (user.roles.includes(Role.Admin)) {
+        can(Action.Read, 'User', ['email']);
+        can(Action.Manage, 'all', ['all']);
       }
     }
 

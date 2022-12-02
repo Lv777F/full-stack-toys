@@ -43,6 +43,7 @@ const whereMap: Partial<
     roles: { hasEvery: roles },
   }),
 };
+@UseGuards(JwtAuthGuard)
 @Resolver(() => User)
 export class UsersResolver {
   constructor(
@@ -51,13 +52,11 @@ export class UsersResolver {
     private abilityFactor: CaslAbilityFactory
   ) {}
 
-  @UseGuards(JwtAuthGuard)
   @Query(() => User, { description: '当前账号的用户信息' })
   me(@CurrentUser('id') userId: User['id']) {
     return this.usersService.findOne(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @AllowAnonymous()
   @Query(() => User, { description: '指定 id 的用户信息' })
   user(
@@ -76,7 +75,7 @@ export class UsersResolver {
         throw err;
       }),
       tap((user) => {
-        const readableFields = permittedFieldsOf(
+        const permittedFields = permittedFieldsOf(
           this.abilityFactor.createAbility(currentUser),
           Action.Read,
           subject('User', { ...user, hash: '' }),
@@ -84,11 +83,9 @@ export class UsersResolver {
             fieldsFrom: ({ fields }) => fields,
           }
         );
-
         const accessDefinedFields = readFields.filter(
-          (field) => !readableFields.includes(field)
+          (field) => !permittedFields.includes(field)
         );
-
         if (accessDefinedFields.length)
           throw new ForbiddenException(
             `无权获取用户信息: ${accessDefinedFields.join(', ')}`
@@ -129,21 +126,22 @@ export class UsersResolver {
     @Args('sorts', { nullable: true }) orderBy?: UserOrderByInput,
     @CurrentUser() currentUser?: RequestUser
   ) {
-    const readableFields = permittedFieldsOf(
+    const permittedFields = permittedFieldsOf(
       this.abilityFactor.createAbility(currentUser),
       Action.Read,
       'User',
-      { fieldsFrom: ({ fields }) => fields }
+      {
+        fieldsFrom: ({ fields }) => fields,
+      }
     );
     const assessDefinedFields = readFields.filter(
-      (field) => !readableFields.includes(field)
+      (field) => !permittedFields.includes(field)
     );
-    // TODO 直接传入 select 条件到 service 里 !
-    if (assessDefinedFields.length) {
+    if (assessDefinedFields.length)
       throw new ForbiddenException(
-        `无权获取用户信息: ${assessDefinedFields.join(', ')}`
+        `无权获取用户列表字段: ${assessDefinedFields.join(', ')}`
       );
-    }
+
     return this.usersService.getPaginatedUsers(
       pagination,
       {
