@@ -27,7 +27,7 @@ export class User {
   @Field({ nullable: true, description: '简介' })
   profile?: string;
 
-  @Field({ description: '邮箱 仅自己或管理员可读写' })
+  @Field({ description: '邮箱 仅自己或 Admin 可读写' })
   email: string;
 
   @Field(() => [Role], { description: '角色' })
@@ -43,7 +43,7 @@ export class User {
   podcasts: PaginatedPodcasts;
 }
 
-@ObjectType()
+@ObjectType({ description: '无关联关系的用户信息' })
 export class PureUser extends OmitType(User, ['podcasts']) {}
 
 @ObjectType()

@@ -160,7 +160,7 @@ export class UsersResolver {
     );
   }
 
-  @Mutation(() => PureUser, { description: '创建用户' })
+  @Mutation(() => PureUser, { description: '创建用户 需 Admin 权限' })
   createUser(
     @Args('createUserInput') createUserInput: CreateUserInput,
     @CurrentUser() user: RequestUser
