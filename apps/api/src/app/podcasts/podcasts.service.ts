@@ -4,10 +4,32 @@ import { Prisma } from '@prisma/client';
 import { forkJoin, from, map } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
+const PODCAST_INCLUDE_AUTHORS_ARG = {
+  include: {
+    author: {
+      select: {
+        id: true,
+        name: true,
+        profile: true,
+        status: true,
+      },
+    },
+  },
+};
 @Injectable()
 export class PodcastsService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * 获取分页播客
+   *
+   * @param pagination 分页依据
+   * @param relations 关联字段
+   * @param where 过滤条件
+   * @param orderBy 排序规则
+   *
+   * @returns 基于游标分页的播客数据
+   */
   getPaginatedPodcasts(
     { cursor, limit = 5 }: CursorBasedPaginationInput,
     relations: string[],
@@ -23,18 +45,8 @@ export class PodcastsService {
           where,
           orderBy,
           include: {
-            authors: relations.includes('authors') && {
-              include: {
-                author: {
-                  select: {
-                    id: true,
-                    name: true,
-                    profile: true,
-                    status: true,
-                  },
-                },
-              },
-            },
+            authors:
+              relations.includes('authors') && PODCAST_INCLUDE_AUTHORS_ARG,
             tags: relations.includes('tags') && {
               include: {
                 tag: true,
@@ -53,23 +65,21 @@ export class PodcastsService {
     );
   }
 
+  /**
+   * 获取指定播客
+   *
+   * @param id
+   * @param relations 关联字段
+   * @param where
+   *
+   * @returns
+   */
   findOne(id: number, relations: string[], where?: Prisma.PodcastWhereInput) {
     return from(
       this.prisma.podcast.findUniqueOrThrow({
         where: { id, AND: [where] },
         include: {
-          authors: {
-            include: {
-              author: relations.includes('authors') && {
-                select: {
-                  id: true,
-                  name: true,
-                  profile: true,
-                  status: true,
-                },
-              },
-            },
-          },
+          authors: relations.includes('authors') && PODCAST_INCLUDE_AUTHORS_ARG,
           tags: relations.includes('tags') && {
             include: {
               tag: true,
