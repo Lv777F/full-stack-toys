@@ -1,9 +1,13 @@
 import { subject } from '@casl/ability';
 import { permittedFieldsOf } from '@casl/ability/extra';
+import { accessibleBy } from '@casl/prisma';
 import {
+  CreateUserInput,
   OffsetBasedPaginationInput,
   PaginatedPodcasts,
   PaginatedUsers,
+  PureUser,
+  UpdateUserInput,
   User,
   UserOrderByInput,
   UserWhereInput,
@@ -17,6 +21,7 @@ import {
 import {
   Args,
   Int,
+  Mutation,
   Parent,
   Query,
   ResolveField,
@@ -69,9 +74,9 @@ export class UsersResolver {
         if (
           err instanceof PrismaClientKnownRequestError &&
           err.code === 'P2025'
-        ) {
+        )
           throw new NotFoundException('未找到指定用户');
-        }
+
         throw err;
       }),
       tap((user) => {
@@ -151,5 +156,50 @@ export class UsersResolver {
       },
       orderBy
     );
+  }
+
+  @Mutation(() => PureUser, { description: '创建用户' })
+  createUser(
+    @Args('createUserInput') createUserInput: CreateUserInput,
+    @CurrentUser() user: RequestUser
+  ) {
+    if (this.abilityFactor.createAbility(user).cannot(Action.Create, 'User')) {
+      throw new ForbiddenException('无权创建用户');
+    }
+    return this.usersService.create(createUserInput);
+  }
+
+  @Mutation(() => PureUser, {
+    description: '更新用户, 传 userId 则更新指定用户, 不传更新当前用户',
+  })
+  updateUser(
+    @Args('updateUserInput') updateUserInput: UpdateUserInput,
+    @CurrentUser() currentUser: RequestUser,
+    @Args({
+      name: 'userId',
+      nullable: true,
+      type: () => Int,
+    })
+    userId?: number
+  ) {
+    return this.usersService
+      .update(
+        userId || currentUser.id,
+        updateUserInput,
+        accessibleBy(
+          this.abilityFactor.createAbility(currentUser),
+          Action.Update
+        ).User
+      )
+      .pipe(
+        catchError((err) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2025'
+          )
+            throw new ForbiddenException('无权修改该用户');
+          throw err;
+        })
+      );
   }
 }

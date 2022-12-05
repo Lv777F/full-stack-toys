@@ -31,6 +31,33 @@ export class UsersService {
   }
 
   /**
+   * 更新用户信息
+   *
+   * @param id
+   * @param user
+   * @param where 额外更新条件, 用于权限校验
+   *
+   * @returns
+   */
+  update(
+    id: User['id'],
+    user: Prisma.UserUpdateInput,
+    where?: Prisma.UserWhereInput
+  ) {
+    return from(
+      this.prisma.user.update({
+        data: {
+          ...user,
+        },
+        where: {
+          id,
+          AND: [where],
+        },
+      })
+    ).pipe(desensitize());
+  }
+
+  /**
    * 根据用户 id 获取用户
    *
    * @param id
@@ -82,7 +109,7 @@ export class UsersService {
   getPaginatedUsers(
     { size, current }: OffsetBasedPaginationInput,
     where?: Prisma.UserWhereInput,
-    orderBy: Prisma.UserOrderByWithRelationAndSearchRelevanceInput = {
+    orderBy: Prisma.UserOrderByWithRelationInput = {
       id: 'desc',
     }
   ) {

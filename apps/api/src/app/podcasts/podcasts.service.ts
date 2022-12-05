@@ -53,10 +53,10 @@ export class PodcastsService {
     );
   }
 
-  findOne(id: number, relations: string[]) {
+  findOne(id: number, relations: string[], where?: Prisma.PodcastWhereInput) {
     return from(
       this.prisma.podcast.findUniqueOrThrow({
-        where: { id },
+        where: { id, AND: [where] },
         include: {
           authors: {
             include: {

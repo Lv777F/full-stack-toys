@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"]
+  previewFeatures = ["extendedWhereUnique"]
 }
 
 datasource db {
@@ -89,9 +89,9 @@ model Tag {
 
 model PodcastTag {
   podcastId Int
-  podcast   Podcast  @relation(fields: [podcastId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  podcast   Podcast  @relation(fields: [podcastId], references: [id], onDelete: Cascade)
   tagId     Int
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
   assigndAt DateTime @default(now())
 
   @@id([podcastId, tagId])
@@ -100,9 +100,9 @@ model PodcastTag {
 
 model PostTag {
   postId Int
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   tagId  Int
-  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([postId, tagId])
   @@map("PostTags")

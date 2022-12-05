@@ -1,4 +1,3 @@
-import { subject } from '@casl/ability';
 import { accessibleBy } from '@casl/prisma';
 import {
   CursorBasedPaginationInput,
@@ -8,10 +7,11 @@ import {
   PodcastWhereInput,
 } from '@full-stack-toys/dto';
 import { Selections } from '@jenyus-org/nestjs-graphql-utils';
-import { ForbiddenException, UseGuards } from '@nestjs/common';
+import { NotFoundException, UseGuards } from '@nestjs/common';
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
 import { Prisma } from '@prisma/client';
-import { tap } from 'rxjs';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { catchError } from 'rxjs';
 import { AllowAnonymous, CurrentUser, RequestUser } from '../auth/decorator';
 import { JwtAuthGuard } from '../auth/guard';
 import { Action, CaslAbilityFactory } from '../casl/casl-ability.factory';
@@ -99,15 +99,23 @@ export class PodcastsResolver {
     @Selections('podcast', ['**']) relations: string[],
     @CurrentUser() user?: RequestUser
   ) {
-    return this.podcastsService.findOne(id, relations).pipe(
-      tap((podcast) => {
-        if (
-          this.abilityFactory
-            .createAbility(user)
-            .cannot(Action.Read, subject('Podcast', podcast))
-        )
-          throw new ForbiddenException('无权读取指定播客');
-      })
-    );
+    return this.podcastsService
+      .findOne(
+        id,
+        relations,
+        accessibleBy(this.abilityFactory.createAbility(user), Action.Read)
+          .Podcast
+      )
+      .pipe(
+        catchError((err) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2025'
+          )
+            throw new NotFoundException('播客不存在或没有权限查看');
+
+          throw err;
+        })
+      );
   }
 }

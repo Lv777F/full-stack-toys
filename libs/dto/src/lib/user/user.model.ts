@@ -1,4 +1,10 @@
-import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import {
+  Field,
+  Int,
+  ObjectType,
+  OmitType,
+  registerEnumType,
+} from '@nestjs/graphql';
 import { Role } from '@prisma/client';
 import { OffsetBasedPaginated } from '../common';
 import { PaginatedPodcasts } from '../podcast';
@@ -36,6 +42,9 @@ export class User {
   @Field(() => PaginatedPodcasts)
   podcasts: PaginatedPodcasts;
 }
+
+@ObjectType()
+export class PureUser extends OmitType(User, ['podcasts']) {}
 
 @ObjectType()
 export class PaginatedUsers extends OffsetBasedPaginated(User) {}
