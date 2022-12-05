@@ -93,7 +93,7 @@ export class UsersResolver {
         );
         if (accessDefinedFields.length)
           throw new ForbiddenException(
-            `无权获取用户信息: ${accessDefinedFields.join(', ')}`
+            `越权获取用户字段: ${accessDefinedFields.join(', ')}`
           );
       })
     );
@@ -106,7 +106,7 @@ export class UsersResolver {
     limit: number,
     @Selections('podcasts.nodes', ['**']) relations: string[]
   ) {
-    if (!roles.length)
+    if (!roles.includes(Role.Contributor))
       return of({
         nodes: [],
         totalCount: 0,
@@ -139,12 +139,14 @@ export class UsersResolver {
         fieldsFrom: ({ fields }) => fields,
       }
     );
+
     const assessDefinedFields = readFields.filter(
       (field) => !permittedFields.includes(field)
     );
+
     if (assessDefinedFields.length)
       throw new ForbiddenException(
-        `无权获取用户列表字段: ${assessDefinedFields.join(', ')}`
+        `越权获取用户列表字段: ${assessDefinedFields.join(', ')}`
       );
 
     return this.usersService.getPaginatedUsers(
@@ -163,9 +165,9 @@ export class UsersResolver {
     @Args('createUserInput') createUserInput: CreateUserInput,
     @CurrentUser() user: RequestUser
   ) {
-    if (this.abilityFactor.createAbility(user).cannot(Action.Create, 'User')) {
-      throw new ForbiddenException('无权创建用户');
-    }
+    if (this.abilityFactor.createAbility(user).cannot(Action.Create, 'User'))
+      throw new ForbiddenException('越权创建用户');
+
     return this.usersService.create(createUserInput);
   }
 
@@ -182,14 +184,26 @@ export class UsersResolver {
     })
     userId?: number
   ) {
+    const ability = this.abilityFactor.createAbility(currentUser);
+
+    const permittedFields = permittedFieldsOf(ability, Action.Update, 'User', {
+      fieldsFrom: ({ fields }) => fields,
+    });
+
+    const accessDefinedFields = Object.keys(updateUserInput).filter(
+      (field) => !permittedFields.includes(field)
+    );
+
+    if (accessDefinedFields.length)
+      throw new ForbiddenException(
+        `越权修改用户字段: ${accessDefinedFields.join(', ')}`
+      );
+
     return this.usersService
       .update(
         userId || currentUser.id,
         updateUserInput,
-        accessibleBy(
-          this.abilityFactor.createAbility(currentUser),
-          Action.Update
-        ).User
+        accessibleBy(ability, Action.Update).User
       )
       .pipe(
         catchError((err) => {
@@ -197,7 +211,7 @@ export class UsersResolver {
             err instanceof PrismaClientKnownRequestError &&
             err.code === 'P2025'
           )
-            throw new ForbiddenException('无权修改该用户');
+            throw new ForbiddenException(`越权修改用户: ${userId}`);
           throw err;
         })
       );
