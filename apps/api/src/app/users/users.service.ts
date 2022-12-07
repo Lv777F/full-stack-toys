@@ -76,22 +76,22 @@ export class UsersService {
   }
 
   /**
-   * 根据邮箱获取指定用户信息 (用于账号密码登陆校验)
+   * 根据用户名获取用户信息 (用于账号密码登陆校验)
    *
-   * @param email 📫
+   * @param username
    *
-   * @returns 用户 id 和 hash
+   * @returns 用户鉴权信息
    */
-  findOneByEmail(email: User['email']) {
+  findOneByUsername(username: User['username']) {
     return from(
       this.prisma.user.findUniqueOrThrow({
         where: {
-          email,
+          username,
         },
         select: {
           hash: true,
           id: true,
-          roles: true,
+          role: true,
         },
       })
     );

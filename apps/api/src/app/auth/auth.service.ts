@@ -21,13 +21,13 @@ export class AuthService {
   /**
    * 校验用户名和密码
    *
-   * @param email 邮箱
+   * @param username 用户名
    * @param password 密码
    *
    * @returns 包含 userId 的对象, 用于 passport 携带到 req 中
    */
-  validateUser(email: User['email'], password: string) {
-    return this.usersService.findOneByEmail(email).pipe(
+  validateUser(username: User['username'], password: string) {
+    return this.usersService.findOneByUsername(username).pipe(
       delayWhen(({ hash }) =>
         // 校验密码与 hash
         from(argon2.verify(hash, password)).pipe(
@@ -36,7 +36,7 @@ export class AuthService {
           })
         )
       ),
-      map(({ id, roles }) => ({ id, roles }))
+      map(({ id, role }) => ({ id, role }))
     );
   }
 
@@ -47,11 +47,11 @@ export class AuthService {
    *
    * @returns tokens
    */
-  generateTokens({ id: userId, roles }: RequestUser) {
+  generateTokens({ id: userId, role }: RequestUser) {
     return forkJoin([
       from(
         this.jwtService.signAsync(
-          { sub: userId, roles },
+          { sub: userId, role },
           {
             secret: this.configService.get('JWT_SECRET'),
             expiresIn: this.configService.get('JWT_EXPIRES_IN'),
@@ -86,7 +86,7 @@ export class AuthService {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
       switchMap((hash) => this.usersService.create({ ...userInfo, hash })),
-      switchMap(({ id, roles }) => this.login({ id, roles }))
+      switchMap(({ id, role }) => this.login({ id, role }))
     );
   }
 
@@ -110,9 +110,9 @@ export class AuthService {
    * @returns tokens
    */
   refresh(userId: User['id'], token: string) {
-    // 重新获取用户 roles 并授权
+    // 重新获取用户 role 并授权
     return this.usersService.findOne(userId).pipe(
-      switchMap(({ roles }) => this.generateTokens({ id: userId, roles })),
+      switchMap(({ role }) => this.generateTokens({ id: userId, role })),
       // 使当前使用的 refreshToken 失效
       delayWhen(() => this.logout(token))
     );

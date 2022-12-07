@@ -9,14 +9,12 @@ import { AuthService } from '../auth.service';
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private authService: AuthService) {
-    super({
-      usernameField: 'email',
-    });
+    super();
   }
 
-  validate(email: string, password: string) {
+  validate(username: string, password: string) {
     return lastValueFrom(
-      this.authService.validateUser(email, password).pipe(
+      this.authService.validateUser(username, password).pipe(
         catchError((err) => {
           if (
             (err instanceof PrismaClientKnownRequestError &&

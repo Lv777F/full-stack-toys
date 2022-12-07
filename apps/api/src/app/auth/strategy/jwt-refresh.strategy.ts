@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
@@ -28,7 +28,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
         .checkToken(req.get('Authorization').replace('Bearer ', ''))
         .pipe(
           tap((result) => {
-            if (!result) throw new ForbiddenException('凭据过期');
+            if (!result) throw new UnauthorizedException('凭据过期');
           }),
           map(() => ({ id }))
         )

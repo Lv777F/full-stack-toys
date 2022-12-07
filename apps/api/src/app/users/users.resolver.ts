@@ -29,7 +29,7 @@ import {
 } from '@nestjs/graphql';
 import { Prisma, Role } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import { catchError, of, tap } from 'rxjs';
+import { catchError, tap } from 'rxjs';
 import { AllowAnonymous, CurrentUser, RequestUser } from '../auth/decorator';
 import { JwtAuthGuard } from '../auth/guard';
 import { Action, CaslAbilityFactory } from '../casl/casl-ability.factory';
@@ -42,10 +42,9 @@ const whereMap: Partial<
     (v: UserWhereInput[keyof UserWhereInput]) => Prisma.UserWhereInput
   >
 > = {
-  email: (v: string) => ({ email: { contains: v } }),
   name: (v: string) => ({ name: { contains: v } }),
   roles: (roles: Role[]) => ({
-    roles: { hasEvery: roles },
+    role: { in: roles },
   }),
 };
 @UseGuards(JwtAuthGuard)
@@ -101,17 +100,11 @@ export class UsersResolver {
 
   @ResolveField(() => PaginatedPodcasts, { description: '用户相关播客' })
   podcasts(
-    @Parent() { id: userId, roles }: User,
+    @Parent() { id: userId }: User,
     @Args('limit', { type: () => Int, defaultValue: 5, nullable: true })
     limit: number,
     @Selections('podcasts.nodes', ['**']) relations: string[]
   ) {
-    if (!roles.includes(Role.Contributor))
-      return of({
-        nodes: [],
-        totalCount: 0,
-        hasNextPage: false,
-      });
     return this.podcastsService.getPaginatedPodcasts({ limit }, relations, {
       published: true,
       authors: {

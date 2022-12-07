@@ -25,7 +25,7 @@ export class AuthResolver {
           err instanceof PrismaClientKnownRequestError &&
           err.code === 'P2002'
         )
-          throw new BadRequestException('邮箱已注册');
+          throw new BadRequestException('用户名已注册');
         throw err;
       })
     );
