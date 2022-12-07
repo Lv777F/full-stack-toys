@@ -4,6 +4,7 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 @InputType({ description: '注册所需信息' })
@@ -17,7 +18,8 @@ export class SignUpInput {
   @IsString()
   @MinLength(2)
   @MaxLength(20)
-  name: string;
+  @ValidateIf((_, value) => value !== undefined)
+  name?: string;
 
   @Field()
   @MinLength(6)

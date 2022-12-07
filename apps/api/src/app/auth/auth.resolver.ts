@@ -19,16 +19,21 @@ export class AuthResolver {
 
   @Mutation(() => Credentials, { description: '注册' })
   signUp(@Args('signUpInput') signUpInput: SignUpInput) {
-    return this.authService.signUp(signUpInput).pipe(
-      catchError((err) => {
-        if (
-          err instanceof PrismaClientKnownRequestError &&
-          err.code === 'P2002'
-        )
-          throw new BadRequestException('用户名已注册');
-        throw err;
+    return this.authService
+      .signUp({
+        ...signUpInput,
+        name: signUpInput.name || signUpInput.username,
       })
-    );
+      .pipe(
+        catchError((err) => {
+          if (
+            err instanceof PrismaClientKnownRequestError &&
+            err.code === 'P2002'
+          )
+            throw new BadRequestException('用户名已注册');
+          throw err;
+        })
+      );
   }
 
   @UseGuards(JwtRefreshAuthGuard)
