@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@full-stack-toys/api-interface": ["libs/api-interface/src/index.ts"],
       "@full-stack-toys/dto": ["libs/dto/src/index.ts"]
     }
   },

@@ -8,8 +8,8 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
 import { redisStore } from 'cache-manager-redis-store';
-import { PodcastsModule } from './podcasts/podcasts.module';
 import { CaslModule } from './casl/casl.module';
+import { PodcastsModule } from './podcasts/podcasts.module';
 @Module({
   imports: [
     ConfigModule.forRoot({

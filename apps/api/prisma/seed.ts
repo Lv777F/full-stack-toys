@@ -2,38 +2,11 @@ import { PodcastIdentity, PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 const prisma = new PrismaClient();
 
-const podcastData = [
-  {
-    title: '第一期',
-    published: true,
-    showNote: '第一期',
-  },
-  {
-    title: '第二期',
-    published: false,
-    showNote: '第二期',
-  },
-  {
-    title: '第三期',
-    published: true,
-    showNote: '第三期',
-  },
-  {
-    title: '第四期',
-    published: true,
-    showNote: '第四期',
-  },
-  {
-    title: '第五期',
-    published: true,
-    showNote: '第五期',
-  },
-  {
-    title: '第六期',
-    published: false,
-    showNote: '第六期',
-  },
-];
+const podcastData = [...Array(50)].map((_, i) => ({
+  title: `第 ${i} 期`,
+  published: Math.random() > 0.2,
+  showNote: `第 ${i} 期 showNote`,
+}));
 
 const userData = [
   {
@@ -43,19 +16,21 @@ const userData = [
   },
   {
     name: 'cabbage',
-    email: 'test1@gmail.com',
+    email: 'cabbage@gmail.com',
     roles: [Role.Contributor],
   },
   {
     name: 'xinbao',
-    email: 'test2@gmail.com',
+    email: 'xinbao@gmail.com',
     roles: [Role.Admin],
   },
-  {
-    name: 'normal',
-    email: 'test3@gmail.com',
-    roles: [],
-  },
+  ...Array(30)
+    .fill(null)
+    .map((_, i) => ({
+      name: `测试用户 ${i + 1}`,
+      email: `test${i + 1}@gmail.com`,
+      roles: Math.random() > 0.8 ? [Role.Contributor] : [],
+    })),
 ];
 
 const tagData = [

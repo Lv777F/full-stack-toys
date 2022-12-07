@@ -44,4 +44,4 @@ export class Podcast {
 }
 
 @ObjectType()
-export class PaginatedPodcast extends CursorBasedPaginated(Podcast) {}
+export class PaginatedPodcasts extends CursorBasedPaginated(Podcast) {}

@@ -27,10 +27,15 @@ export class CaslAbilityFactory {
 
     can(Action.Read, 'Podcast', { published: true });
     can(Action.Read, 'Post', { published: true });
-    can(Action.Read, 'User');
+    can(Action.Read, 'User', ['id', 'name', 'profile', 'status', 'roles']);
 
     if (user) {
-      can(Action.Update, 'User', { id: user.id });
+      can(Action.Read, 'User', ['email'], {
+        id: user.id,
+      });
+      can(Action.Update, 'User', ['name', 'profile', 'status'], {
+        id: user.id,
+      });
 
       if (user.roles.includes(Role.Contributor)) {
         can([Action.Read, Action.Update], 'Podcast', {
@@ -39,7 +44,9 @@ export class CaslAbilityFactory {
       }
 
       if (user.roles.includes(Role.Admin)) {
-        can(Action.Manage, 'all');
+        can(Action.Read, 'User', ['email']);
+        can(Action.Update, 'User', ['roles']);
+        can(Action.Manage, 'all', ['all']);
       }
     }
 

@@ -1,15 +1,11 @@
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ValidationError } from '@full-stack-toys/api-interface';
+import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { Cache } from 'cache-manager';
-import { delayWhen, exhaustMap, forkJoin, from, map, tap } from 'rxjs';
+import { delayWhen, forkJoin, from, map, switchMap, tap } from 'rxjs';
 import { UsersService } from '../users/users.service';
 import { RequestUser } from './decorator';
 
@@ -32,14 +28,11 @@ export class AuthService {
    */
   validateUser(email: User['email'], password: string) {
     return this.usersService.findOneByEmail(email).pipe(
-      tap((user) => {
-        if (!user) throw new UnauthorizedException('用户名或密码错误');
-      }),
       delayWhen(({ hash }) =>
         // 校验密码与 hash
         from(argon2.verify(hash, password)).pipe(
           tap((result) => {
-            if (!result) throw new UnauthorizedException('用户名或密码错误');
+            if (!result) throw new ValidationError('密码不正确');
           })
         )
       ),
@@ -89,11 +82,11 @@ export class AuthService {
   signUp({
     password,
     ...userInfo
-  }: Pick<User, 'name' | 'email'> & { password: string }) {
+  }: Omit<Prisma.UserCreateInput, 'hash'> & { password: string }) {
     // 转换密码为哈希保存
     return from(argon2.hash(password)).pipe(
-      exhaustMap((hash) => this.usersService.create({ ...userInfo, hash })),
-      exhaustMap(({ id, roles }) => this.login({ id, roles }))
+      switchMap((hash) => this.usersService.create({ ...userInfo, hash })),
+      switchMap(({ id, roles }) => this.login({ id, roles }))
     );
   }
 
@@ -119,7 +112,7 @@ export class AuthService {
   refresh(userId: User['id'], token: string) {
     // 重新获取用户 roles 并授权
     return this.usersService.findOne(userId).pipe(
-      exhaustMap(({ roles }) => this.generateTokens({ id: userId, roles })),
+      switchMap(({ roles }) => this.generateTokens({ id: userId, roles })),
       // 使当前使用的 refreshToken 失效
       delayWhen(() => this.logout(token))
     );

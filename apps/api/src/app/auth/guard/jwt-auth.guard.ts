@@ -6,7 +6,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { AuthGuard } from '@nestjs/passport';
-import { catchError, from, of, throwError } from 'rxjs';
+import { catchError, from, of } from 'rxjs';
 import { ALLOW_ANONYMOUS_KEY } from '../decorator';
 
 @Injectable()
@@ -24,7 +24,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       catchError((err) => {
         if (err instanceof UnauthorizedException) {
           const ctx = GqlExecutionContext.create(context);
-
+          // 允许匿名接口忽略 auth 错误
           if (
             this.reflector.getAllAndOverride<boolean | undefined>(
               ALLOW_ANONYMOUS_KEY,
@@ -34,7 +34,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             return of(true);
         }
 
-        return throwError(() => err);
+        throw err;
       })
     );
   }
