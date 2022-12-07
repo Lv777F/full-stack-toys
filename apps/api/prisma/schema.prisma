@@ -15,7 +15,7 @@ enum Role {
 
 model User {
   id        Int      @id @default(autoincrement())
-  username  String   @unique
+  username  String?  @unique
   name      String
   profile   String?  @db.Text
   createdAt DateTime @default(now())

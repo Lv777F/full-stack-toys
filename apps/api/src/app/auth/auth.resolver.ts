@@ -17,8 +17,14 @@ export class AuthResolver {
     return this.authService.login(user);
   }
 
-  @Mutation(() => Credentials, { description: '注册' })
-  signUp(@Args('signUpInput') signUpInput: SignUpInput) {
+  @Mutation(() => Credentials, {
+    // TODO 邀请注册 tempToken 逻辑
+    description: '只开放邀请注册 需要提供 tempToken',
+  })
+  signUp(
+    @Args('signUpInput') signUpInput: SignUpInput,
+    @Args('tempToken') tempToken: string
+  ) {
     return this.authService
       .signUp({
         ...signUpInput,
