@@ -1,11 +1,12 @@
 import { ValidationError } from '@full-stack-toys/api-interface';
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { RedisService } from '@liaoliaots/nestjs-redis';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { Cache } from 'cache-manager';
-import { delayWhen, forkJoin, from, map, switchMap, tap } from 'rxjs';
+import * as crypto from 'crypto';
+import { delayWhen, forkJoin, from, map, of, switchMap, tap } from 'rxjs';
 import { UsersService } from '../users/users.service';
 import { RequestUser } from './decorator';
 
@@ -15,7 +16,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    @Inject(CACHE_MANAGER) private cacheService: Cache
+    private redisService: RedisService
   ) {}
 
   /**
@@ -127,17 +128,27 @@ export class AuthService {
    */
   logout(token: string) {
     // 添加当前 token 到 redis 黑名单
-    return from(this.cacheService.set(`bl_${token}`, true));
+    return from(
+      this.redisService.getClient().sadd('refresh_token_blacklist', token)
+    );
   }
 
-  /**
-   * 判断当前 token 是否有效 ( 不在 redis 黑名单中 )
-   *
-   * @param token
-   *
-   * @returns redis 查询结果
-   */
-  checkToken(token: string) {
-    return from(this.cacheService.get(`bl_${token}`)).pipe(map((r) => !r));
+  consumeTempToken(token: string) {
+    // TODO 处理一下
+    return from(
+      this.redisService.getClient().hget('invite_sign_up_temp_tokens', token)
+    );
+  }
+
+  generateTempToken(userId: User['id']) {
+    return of(crypto.randomBytes(8).toString('hex')).pipe(
+      delayWhen((tempToken) =>
+        from(
+          this.redisService
+            .getClient()
+            .hset('invite_sign_up_temp_tokens', tempToken, userId)
+        )
+      )
+    );
   }
 }

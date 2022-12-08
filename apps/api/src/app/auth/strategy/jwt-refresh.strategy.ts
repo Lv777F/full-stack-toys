@@ -1,11 +1,10 @@
+import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { lastValueFrom, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthService } from '../auth.service';
 import { RequestUser } from '../decorator';
 
 @Injectable()
@@ -13,7 +12,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh'
 ) {
-  constructor(config: ConfigService, private authService: AuthService) {
+  constructor(config: ConfigService, private redisService: RedisService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: config.get('JWT_REFRESH_SECRET'),
@@ -23,15 +22,15 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   validate(req: Request, { sub: id }: { sub: RequestUser['id'] }) {
-    return lastValueFrom(
-      this.authService
-        .checkToken(req.get('Authorization').replace('Bearer ', ''))
-        .pipe(
-          tap((result) => {
-            if (!result) throw new UnauthorizedException('凭据过期');
-          }),
-          map(() => ({ id }))
-        )
-    );
+    return this.redisService
+      .getClient()
+      .sismember(
+        'refresh_token_blacklist',
+        req.get('Authorization').replace('Bearer ', '')
+      )
+      .then((isTokenInBlacklist) => {
+        if (isTokenInBlacklist) throw new UnauthorizedException('凭据过期');
+        return { id };
+      });
   }
 }

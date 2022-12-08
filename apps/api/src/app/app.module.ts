@@ -1,15 +1,16 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
+import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
-import { redisStore } from 'cache-manager-redis-store';
 import { CaslModule } from './casl/casl.module';
 import { PodcastsModule } from './podcasts/podcasts.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -22,24 +23,13 @@ import { PodcastsModule } from './podcasts/podcasts.module';
       plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
       autoSchemaFile: true,
     }),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      imports: [ConfigModule],
+    RedisModule.forRootAsync({
       inject: [ConfigService],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      useFactory: async (config: ConfigService) => {
-        const store = await redisStore({
-          socket: {
-            host: config.get('REDIS_HOST'),
-            port: +config.get('REDIS_PORT'),
-          },
-          ttl: 7 * 24 * 60 * 60,
-        });
-        return {
-          store: () => store,
-        };
-      },
+      useFactory: (config: ConfigService) => ({
+        config: {
+          url: config.get('REDIS_URL'),
+        },
+      }),
     }),
     PrismaModule,
     AuthModule,

@@ -22,8 +22,8 @@ export class AuthResolver {
     description: '只开放邀请注册 需要提供 tempToken',
   })
   signUp(
-    @Args('signUpInput') signUpInput: SignUpInput,
-    @Args('tempToken') tempToken: string
+    @Args('tempToken') tempToken: string,
+    @Args('signUpInput') signUpInput: SignUpInput
   ) {
     return this.authService
       .signUp({
