@@ -1,11 +1,11 @@
-import { ValidationError } from '@full-stack-toys/api-interface';
-import { RedisService } from '@liaoliaots/nestjs-redis';
+import { RedisKey, ValidationError } from '@full-stack-toys/api-interface';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
 import * as argon2 from 'argon2';
-import * as crypto from 'crypto';
+import { Redis } from 'ioredis';
 import { delayWhen, forkJoin, from, map, of, switchMap, tap } from 'rxjs';
 import { UsersService } from '../users/users.service';
 import { RequestUser } from './decorator';
@@ -16,7 +16,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private redisService: RedisService
+    @InjectRedis() private redis: Redis
   ) {}
 
   /**
@@ -115,7 +115,7 @@ export class AuthService {
     return this.usersService.findOne(userId).pipe(
       switchMap(({ role }) => this.generateTokens({ id: userId, role })),
       // 使当前使用的 refreshToken 失效
-      delayWhen(() => this.logout(token))
+      delayWhen(() => this.logout(userId, token))
     );
   }
 
@@ -126,28 +126,24 @@ export class AuthService {
    *
    * @returns
    */
-  logout(token: string) {
-    // 添加当前 token 到 redis 黑名单
+  logout(userId: User['id'], token: string) {
+    const blacklistKey = RedisKey.RefreshTokenBlacklist.replace(
+      '{id}',
+      userId + ''
+    );
     return from(
-      this.redisService.getClient().sadd('refresh_token_blacklist', token)
+      this.redis
+        .multi()
+        .sadd(blacklistKey, token)
+        .expire(blacklistKey, '7d')
+        .exec()
     );
   }
 
-  consumeTempToken(token: string) {
-    // TODO 处理一下
-    return from(
-      this.redisService.getClient().hget('invite_sign_up_temp_tokens', token)
-    );
-  }
-
-  generateTempToken(userId: User['id']) {
-    return of(crypto.randomBytes(8).toString('hex')).pipe(
+  inviteUser(userId: User['id']) {
+    return of(Math.random().toString(36).substring(2)).pipe(
       delayWhen((tempToken) =>
-        from(
-          this.redisService
-            .getClient()
-            .hset('invite_sign_up_temp_tokens', tempToken, userId)
-        )
+        from(this.redis.hset(RedisKey.SignUpTempTokens, userId + '', tempToken))
       )
     );
   }

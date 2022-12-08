@@ -1,8 +1,10 @@
-import { RedisService } from '@liaoliaots/nestjs-redis';
+import { RedisKey } from '@full-stack-toys/api-interface';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
+import { Redis } from 'ioredis';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { environment } from '../../../environments/environment';
 import { RequestUser } from '../decorator';
@@ -12,7 +14,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh'
 ) {
-  constructor(config: ConfigService, private redisService: RedisService) {
+  constructor(config: ConfigService, @InjectRedis() private redis: Redis) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: config.get('JWT_REFRESH_SECRET'),
@@ -22,10 +24,9 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   validate(req: Request, { sub: id }: { sub: RequestUser['id'] }) {
-    return this.redisService
-      .getClient()
+    return this.redis
       .sismember(
-        'refresh_token_blacklist',
+        RedisKey.RefreshTokenBlacklist.replace('{id}', id + ''),
         req.get('Authorization').replace('Bearer ', '')
       )
       .then((isTokenInBlacklist) => {

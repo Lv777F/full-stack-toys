@@ -57,9 +57,12 @@ export class AuthResolver {
   @Mutation(() => Boolean, {
     description: '登出, 需要传递 RefreshToken 作为 Bearer Token',
   })
-  logout(@Context() context) {
+  logout(@Context() context, @CurrentUser('id') userId: RequestUser['id']) {
     return this.authService
-      .logout(context.req.header('Authorization').replace('Bearer ', ''))
+      .logout(
+        userId,
+        context.req.header('Authorization').replace('Bearer ', '')
+      )
       .pipe(map(() => true));
   }
 }
