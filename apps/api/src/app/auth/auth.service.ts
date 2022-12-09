@@ -1,4 +1,8 @@
-import { RedisKey, ValidationError } from '@full-stack-toys/api-interface';
+import {
+  RedisKey,
+  UnAuthorizedError,
+  ValidationError,
+} from '@full-stack-toys/api-interface';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -48,7 +52,7 @@ export class AuthService {
    *
    * @returns tokens
    */
-  generateTokens({ id: userId, role }: RequestUser) {
+  signTokens({ id: userId, role }: RequestUser) {
     return forkJoin([
       from(
         this.jwtService.signAsync(
@@ -76,30 +80,37 @@ export class AuthService {
   /**
    * 注册
    *
-   * @param userData 注册必须信息
+   * @param inviteCode
+   * @param userData
    *
    * @returns tokens
    */
-  signUp({
-    password,
-    ...userInfo
-  }: Omit<Prisma.UserCreateInput, 'hash'> & { password: string }) {
-    // 转换密码为哈希保存
-    return from(argon2.hash(password)).pipe(
-      switchMap((hash) => this.usersService.create({ ...userInfo, hash })),
-      switchMap(({ id, role }) => this.login({ id, role }))
+  signUp(
+    inviteCode: string,
+    {
+      password,
+      ...userInfo
+    }: Omit<Prisma.UserUpdateInput, 'hash'> & { password: string }
+  ) {
+    return from(this.redis.hgetall(RedisKey.InviteCodes)).pipe(
+      map((inviteCodes) =>
+        Object.keys(inviteCodes).find(
+          (userId) => inviteCodes[userId] === inviteCode
+        )
+      ),
+      tap((userId) => {
+        if (!userId) throw new UnAuthorizedError('凭证过期或无效');
+      }),
+      switchMap((userId) =>
+        from(argon2.hash(password)).pipe(
+          switchMap((hash) =>
+            this.usersService.update(+userId, { ...userInfo, hash })
+          )
+        )
+      ),
+      tap(({ id }) => this.redis.hdel(RedisKey.InviteCodes, id + '')),
+      switchMap(({ id, role }) => this.signTokens({ id, role }))
     );
-  }
-
-  /**
-   * 登录
-   *
-   * @param user
-   *
-   * @returns tokens
-   */
-  login(user: RequestUser) {
-    return this.generateTokens(user);
   }
 
   /**
@@ -113,7 +124,7 @@ export class AuthService {
   refresh(userId: User['id'], token: string) {
     // 重新获取用户 role 并授权
     return this.usersService.findOne(userId).pipe(
-      switchMap(({ role }) => this.generateTokens({ id: userId, role })),
+      switchMap(({ role }) => this.signTokens({ id: userId, role })),
       // 使当前使用的 refreshToken 失效
       delayWhen(() => this.logout(userId, token))
     );
@@ -127,23 +138,15 @@ export class AuthService {
    * @returns
    */
   logout(userId: User['id'], token: string) {
-    const blacklistKey = RedisKey.RefreshTokenBlacklist.replace(
-      '{id}',
-      userId + ''
-    );
-    return from(
-      this.redis
-        .multi()
-        .sadd(blacklistKey, token)
-        .expire(blacklistKey, '7d')
-        .exec()
-    );
-  }
-
-  inviteUser(userId: User['id']) {
-    return of(Math.random().toString(36).substring(2)).pipe(
-      delayWhen((tempToken) =>
-        from(this.redis.hset(RedisKey.SignUpTempTokens, userId + '', tempToken))
+    return of(RedisKey.RefreshTokenBlacklist.replace('{id}', userId + '')).pipe(
+      switchMap((blacklistKey) =>
+        from(
+          this.redis
+            .multi()
+            .sadd(blacklistKey, token)
+            .expire(blacklistKey, '7d')
+            .exec()
+        )
       )
     );
   }

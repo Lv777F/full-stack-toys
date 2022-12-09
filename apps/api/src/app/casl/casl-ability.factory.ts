@@ -41,7 +41,11 @@ export class CaslAbilityFactory {
       });
 
       if (user.role === Role.Admin) {
-        can([Action.Update, Action.Read], 'User', ['role', 'username']);
+        can([Action.Update, Action.Read], 'User', [
+          'role',
+          'username',
+          'inviteCode',
+        ]);
         can(Action.Manage, 'all', ['all']);
       }
     }

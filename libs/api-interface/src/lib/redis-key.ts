@@ -6,5 +6,5 @@ export enum RedisKey {
   /**
    * 邀请注册临时 Token
    */
-  SignUpTempTokens = 'sign_up_temp_tokens',
+  InviteCodes = 'user_invite_codes',
 }

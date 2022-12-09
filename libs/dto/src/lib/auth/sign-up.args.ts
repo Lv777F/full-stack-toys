@@ -14,7 +14,7 @@ export class SignUpInput {
   @MinLength(2)
   username: string;
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @MinLength(2)
   @MaxLength(20)

@@ -14,6 +14,7 @@ import {
 } from '@full-stack-toys/dto';
 import { Selections } from '@jenyus-org/nestjs-graphql-utils';
 import {
+  BadRequestException,
   ForbiddenException,
   NotFoundException,
   UseGuards,
@@ -98,6 +99,12 @@ export class UsersResolver {
     );
   }
 
+  @ResolveField(() => String)
+  inviteCode(@Parent() user: User) {
+    if (user.username) throw new BadRequestException('用户已注册');
+    return this.usersService.generateInviteCode(user.id);
+  }
+
   @ResolveField(() => PaginatedPodcasts, { description: '用户相关播客' })
   podcasts(
     @Parent() { id: userId }: User,
@@ -164,6 +171,7 @@ export class UsersResolver {
     return this.usersService.create(createUserInput);
   }
 
+  // TODO 删除 inviteCode 返回结构
   @Mutation(() => PureUser, {
     description: '更新用户, 传 userId 则更新指定用户, 不传更新当前用户',
   })

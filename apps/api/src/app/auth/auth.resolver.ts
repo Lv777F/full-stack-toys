@@ -1,5 +1,10 @@
+import { UnAuthorizedError } from '@full-stack-toys/api-interface';
 import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
-import { BadRequestException, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { catchError, map } from 'rxjs';
@@ -14,19 +19,22 @@ export class AuthResolver {
   @UseGuards(LocalAuthGuard)
   @Mutation(() => Credentials, { description: '登录' })
   login(@Args('loginInput') _: LoginInput, @CurrentUser() user: RequestUser) {
-    return this.authService.login(user);
+    return this.authService.signTokens(user);
   }
 
   @Mutation(() => Credentials, {
-    // TODO 邀请注册 tempToken 逻辑
-    description: '只开放邀请注册 需要提供 tempToken',
+    description: '只开放邀请注册 需要提供 inviteCode',
   })
   signUp(
-    @Args('tempToken') tempToken: string,
+    @Args({
+      name: 'inviteCode',
+      description: '邀请码',
+    })
+    inviteCode: string,
     @Args('signUpInput') signUpInput: SignUpInput
   ) {
     return this.authService
-      .signUp({
+      .signUp(inviteCode, {
         ...signUpInput,
         name: signUpInput.name || signUpInput.username,
       })
@@ -37,6 +45,8 @@ export class AuthResolver {
             err.code === 'P2002'
           )
             throw new BadRequestException('用户名已注册');
+          if (err instanceof UnAuthorizedError)
+            throw new UnauthorizedException(err.message);
           throw err;
         })
       );

@@ -1,7 +1,10 @@
+import { RedisKey } from '@full-stack-toys/api-interface';
 import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { forkJoin, from, map, pipe } from 'rxjs';
+import { Redis } from 'ioredis';
+import { delayWhen, forkJoin, from, map, of, pipe } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -11,7 +14,10 @@ const desensitize = () => pipe(map(({ hash: _, ...user }: User) => user));
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @InjectRedis() private redis: Redis
+  ) {}
 
   /**
    * 创建用户
@@ -130,6 +136,21 @@ export class UsersService {
         current,
         size,
       }))
+    );
+  }
+
+  /**
+   * 为用户生成 InviteCode
+   *
+   * @param userId
+   *
+   * @returns
+   */
+  generateInviteCode(userId: User['id']) {
+    return of(Math.random().toString(36).substring(2)).pipe(
+      delayWhen((inviteCode) =>
+        from(this.redis.hset(RedisKey.InviteCodes, userId + '', inviteCode))
+      )
     );
   }
 }
