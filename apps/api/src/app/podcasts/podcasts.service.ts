@@ -1,7 +1,8 @@
+import { NotFoundError } from '@full-stack-toys/api-interface';
 import { CursorBasedPaginationInput } from '@full-stack-toys/dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { forkJoin, from, map } from 'rxjs';
+import { forkJoin, from, map, tap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 const PODCAST_INCLUDE_AUTHORS_ARG = {
@@ -76,7 +77,7 @@ export class PodcastsService {
    */
   findOne(id: number, relations: string[], where?: Prisma.PodcastWhereInput) {
     return from(
-      this.prisma.podcast.findUniqueOrThrow({
+      this.prisma.podcast.findUnique({
         where: { id, AND: [where] },
         include: {
           authors: relations.includes('authors') && PODCAST_INCLUDE_AUTHORS_ARG,
@@ -86,6 +87,10 @@ export class PodcastsService {
             },
           },
         },
+      })
+    ).pipe(
+      tap((podcast) => {
+        if (!podcast) throw new NotFoundError('未找到播客');
       })
     );
   }
