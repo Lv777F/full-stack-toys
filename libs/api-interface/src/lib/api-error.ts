@@ -5,3 +5,7 @@ export class ValidationError extends Error {
 export class UnAuthorizedError extends Error {
   name = 'UnAuthorizedError';
 }
+
+export class NotFoundError extends Error {
+  name: 'NotFoundError';
+}

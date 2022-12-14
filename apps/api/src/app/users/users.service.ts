@@ -1,10 +1,10 @@
-import { RedisKey } from '@full-stack-toys/api-interface';
+import { NotFoundError, RedisKey } from '@full-stack-toys/api-interface';
 import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { Redis } from 'ioredis';
-import { delayWhen, forkJoin, from, map, of, pipe } from 'rxjs';
+import { delayWhen, forkJoin, from, map, of, pipe, tap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -72,13 +72,18 @@ export class UsersService {
    */
   findOne(id: User['id']) {
     return from(
-      // !该方法存在 bug 无法同时进行两个查询 2022/12/2
-      this.prisma.user.findUniqueOrThrow({
+      // ! findUniqueOrThrow 方法存在 bug 无法同时进行两个查询 2022/12/2
+      this.prisma.user.findUnique({
         where: {
           id,
         },
       })
-    ).pipe(desensitize());
+    ).pipe(
+      tap((user) => {
+        if (!user) throw new NotFoundError('未找到用户');
+      }),
+      desensitize()
+    );
   }
 
   /**

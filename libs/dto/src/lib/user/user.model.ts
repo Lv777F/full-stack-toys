@@ -1,13 +1,6 @@
-import {
-  Field,
-  Int,
-  ObjectType,
-  OmitType,
-  registerEnumType,
-} from '@nestjs/graphql';
+import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { Role } from '@prisma/client';
 import { OffsetBasedPaginated } from '../common';
-import { PaginatedPodcasts } from '../podcast';
 
 registerEnumType(Role, {
   name: 'Role',
@@ -38,18 +31,13 @@ export class User {
 
   @Field({ nullable: true, description: '当前状态' })
   status?: string;
-
-  @Field(() => PaginatedPodcasts)
-  podcasts: PaginatedPodcasts;
-
-  @Field({ description: '邀请用户的注册凭据,仅 Admin 可读' })
-  inviteCode?: string;
 }
 
-@ObjectType({ description: '无关联关系的用户信息' })
-export class PureUser extends OmitType(User, ['podcasts']) {}
+@ObjectType()
+export class UserWithInviteCode extends User {
+  @Field({ description: '邀请用户的注册凭据,仅 Admin 可读' })
+  inviteCode: string;
+}
 
 @ObjectType()
-export class PaginatedUsers extends OffsetBasedPaginated(
-  OmitType(User, ['inviteCode'])
-) {}
+export class PaginatedUsers extends OffsetBasedPaginated(User) {}

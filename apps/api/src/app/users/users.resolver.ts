@@ -1,20 +1,20 @@
 import { subject } from '@casl/ability';
 import { permittedFieldsOf } from '@casl/ability/extra';
 import { accessibleBy } from '@casl/prisma';
+import { NotFoundError } from '@full-stack-toys/api-interface';
 import {
   CreateUserInput,
   OffsetBasedPaginationInput,
   PaginatedPodcasts,
   PaginatedUsers,
-  PureUser,
   UpdateUserInput,
   User,
   UserOrderByInput,
   UserWhereInput,
+  UserWithInviteCode,
 } from '@full-stack-toys/dto';
-import { Selections } from '@jenyus-org/nestjs-graphql-utils';
+import { HasFields, Selections } from '@jenyus-org/nestjs-graphql-utils';
 import {
-  BadRequestException,
   ForbiddenException,
   NotFoundException,
   UseGuards,
@@ -30,7 +30,7 @@ import {
 } from '@nestjs/graphql';
 import { Prisma, Role } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import { catchError, tap } from 'rxjs';
+import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { AllowAnonymous, CurrentUser, RequestUser } from '../auth/decorator';
 import { JwtAuthGuard } from '../auth/guard';
 import { Action, CaslAbilityFactory } from '../casl/casl-ability.factory';
@@ -57,24 +57,23 @@ export class UsersResolver {
     private abilityFactor: CaslAbilityFactory
   ) {}
 
-  @Query(() => User, { description: '当前账号的用户信息' })
+  @Query(() => User, {
+    description: '当前账号的用户信息',
+  })
   me(@CurrentUser('id') userId: User['id']) {
     return this.usersService.findOne(userId);
   }
 
   @AllowAnonymous()
-  @Query(() => User, { description: '指定 id 的用户信息' })
+  @Query(() => UserWithInviteCode, { description: '指定 id 的用户信息' })
   user(
     @Args('id', { type: () => Int }) userId: User['id'],
-    @Selections('user', ['*.']) readFields: string[],
+    @Selections('user', ['*.']) readFields: (keyof UserWithInviteCode)[],
     @CurrentUser() currentUser?: RequestUser
   ) {
     return this.usersService.findOne(userId).pipe(
       catchError((err) => {
-        if (
-          err instanceof PrismaClientKnownRequestError &&
-          err.code === 'P2025'
-        )
+        if (err instanceof NotFoundError)
           throw new NotFoundException('未找到指定用户');
 
         throw err;
@@ -95,14 +94,15 @@ export class UsersResolver {
           throw new ForbiddenException(
             `越权获取用户字段: ${accessDefinedFields.join(', ')}`
           );
-      })
+      }),
+      switchMap((user) =>
+        readFields.includes('inviteCode')
+          ? this.usersService
+              .generateInviteCode(user.id)
+              .pipe(map((inviteCode) => ({ ...user, inviteCode })))
+          : of(user)
+      )
     );
-  }
-
-  @ResolveField(() => String)
-  inviteCode(@Parent() user: User) {
-    if (user.username) throw new BadRequestException('用户已注册');
-    return this.usersService.generateInviteCode(user.id);
   }
 
   @ResolveField(() => PaginatedPodcasts, { description: '用户相关播客' })
@@ -123,7 +123,9 @@ export class UsersResolver {
   }
 
   @AllowAnonymous()
-  @Query(() => PaginatedUsers, { description: '分页查询用户' })
+  @Query(() => PaginatedUsers, {
+    description: '分页查询用户',
+  })
   users(
     @Args('pagination') pagination: OffsetBasedPaginationInput,
     @Selections('users.nodes', ['*.']) readFields: string[],
@@ -160,19 +162,31 @@ export class UsersResolver {
     );
   }
 
-  @Mutation(() => PureUser, { description: '创建用户 需 Admin 权限' })
+  @Mutation(() => UserWithInviteCode, {
+    description: '创建用户 需 Admin 权限',
+  })
   createUser(
     @Args('createUserInput') createUserInput: CreateUserInput,
-    @CurrentUser() user: RequestUser
+    @CurrentUser() user: RequestUser,
+    @HasFields('createUser.inviteCode') withInviteCode: boolean
   ) {
     if (this.abilityFactor.createAbility(user).cannot(Action.Create, 'User'))
       throw new ForbiddenException('越权创建用户');
 
-    return this.usersService.create(createUserInput);
+    return this.usersService
+      .create(createUserInput)
+      .pipe(
+        switchMap((user) =>
+          withInviteCode
+            ? this.usersService
+                .generateInviteCode(user.id)
+                .pipe(map((inviteCode) => ({ ...user, inviteCode })))
+            : of(user)
+        )
+      );
   }
 
-  // TODO 删除 inviteCode 返回结构
-  @Mutation(() => PureUser, {
+  @Mutation(() => User, {
     description: '更新用户, 传 userId 则更新指定用户, 不传更新当前用户',
   })
   updateUser(
