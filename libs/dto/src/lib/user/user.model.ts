@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { Role } from '@prisma/client';
 import { OffsetBasedPaginated } from '../common';
 
@@ -11,8 +11,8 @@ registerEnumType(Role, {
   description: '用户',
 })
 export class User {
-  @Field(() => Int)
-  id: number;
+  @Field(() => ID)
+  id: string;
 
   @Field({ description: '用户名 仅自己或 Admin 可读' })
   username: string;

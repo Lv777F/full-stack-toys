@@ -21,6 +21,7 @@ import {
 } from '@nestjs/common';
 import {
   Args,
+  ID,
   Int,
   Mutation,
   Parent,
@@ -60,18 +61,18 @@ export class UsersResolver {
   @Query(() => User, {
     description: '当前账号的用户信息',
   })
-  me(@CurrentUser('id') userId: User['id']) {
+  me(@CurrentUser('id') userId: RequestUser['id']) {
     return this.usersService.findOne(userId);
   }
 
   @AllowAnonymous()
   @Query(() => UserWithInviteCode, { description: '指定 id 的用户信息' })
   user(
-    @Args('id', { type: () => Int }) userId: User['id'],
+    @Args('id', { type: () => ID }) userId: User['id'],
     @Selections('user', ['*.']) readFields: (keyof UserWithInviteCode)[],
     @CurrentUser() currentUser?: RequestUser
   ) {
-    return this.usersService.findOne(userId).pipe(
+    return this.usersService.findOne(+userId).pipe(
       catchError((err) => {
         if (err instanceof NotFoundError)
           throw new NotFoundException('未找到指定用户');
@@ -116,7 +117,7 @@ export class UsersResolver {
       published: true,
       authors: {
         some: {
-          authorId: userId,
+          authorId: +userId,
         },
       },
     });
@@ -192,12 +193,11 @@ export class UsersResolver {
   updateUser(
     @Args('updateUserInput') updateUserInput: UpdateUserInput,
     @CurrentUser() currentUser: RequestUser,
-    @Args({
-      name: 'userId',
+    @Args('userId', {
       nullable: true,
-      type: () => Int,
+      type: () => ID,
     })
-    userId?: number
+    userId?: User['id']
   ) {
     const ability = this.abilityFactor.createAbility(currentUser);
 
@@ -216,7 +216,7 @@ export class UsersResolver {
 
     return this.usersService
       .update(
-        userId || currentUser.id,
+        +userId || currentUser.id,
         updateUserInput,
         accessibleBy(ability, Action.Update).User
       )
