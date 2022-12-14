@@ -1,6 +1,6 @@
 import {
   Field,
-  Int,
+  ID,
   MiddlewareContext,
   NextFn,
   ObjectType,
@@ -15,8 +15,8 @@ export class PodcastTag extends OmitType(Tag, ['podcasts']) {}
 
 @ObjectType()
 export class Podcast {
-  @Field(() => Int)
-  id: number;
+  @Field(() => ID)
+  id: string;
 
   @Field()
   title?: string;

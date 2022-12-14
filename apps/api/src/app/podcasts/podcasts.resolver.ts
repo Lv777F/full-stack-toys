@@ -1,16 +1,18 @@
 import { accessibleBy } from '@casl/prisma';
+import { NotFoundError } from '@full-stack-toys/api-interface';
 import {
   CursorBasedPaginationInput,
   PaginatedPodcasts,
   Podcast,
   PodcastOrderByInput,
   PodcastWhereInput,
+  Tag,
+  User,
 } from '@full-stack-toys/dto';
 import { Selections } from '@jenyus-org/nestjs-graphql-utils';
 import { NotFoundException, UseGuards } from '@nestjs/common';
-import { Args, Int, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import { Prisma } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { catchError } from 'rxjs';
 import { AllowAnonymous, CurrentUser, RequestUser } from '../auth/decorator';
 import { JwtAuthGuard } from '../auth/guard';
@@ -33,20 +35,20 @@ const whereMap: Partial<
       },
     ],
   }),
-  authors: (authorIds: number[]) => ({
+  authors: (authorIds: User['id'][]) => ({
     AND: authorIds.map((authorId) => ({
       authors: {
         some: {
-          authorId: { equals: authorId },
+          authorId: { equals: +authorId },
         },
       },
     })),
   }),
-  tags: (tagIds: number[]) => ({
+  tags: (tagIds: Tag['id'][]) => ({
     AND: tagIds.map((tagId) => ({
       tags: {
         some: {
-          tagId: { equals: tagId },
+          tagId: { equals: +tagId },
         },
       },
     })),
@@ -95,23 +97,20 @@ export class PodcastsResolver {
   @AllowAnonymous()
   @Query(() => Podcast, { description: '获取指定播客数据' })
   podcast(
-    @Args('id', { type: () => Int }) id: number,
+    @Args('id', { type: () => ID }) id: Podcast['id'],
     @Selections('podcast', ['**']) relations: string[],
     @CurrentUser() user?: RequestUser
   ) {
     return this.podcastsService
       .findOne(
-        id,
+        +id,
         relations,
         accessibleBy(this.abilityFactory.createAbility(user), Action.Read)
           .Podcast
       )
       .pipe(
         catchError((err) => {
-          if (
-            err instanceof PrismaClientKnownRequestError &&
-            err.code === 'P2025'
-          )
+          if (err instanceof NotFoundError)
             throw new NotFoundException('播客不存在或没有权限查看');
 
           throw err;

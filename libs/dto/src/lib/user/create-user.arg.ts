@@ -1,17 +1,25 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsString, MaxLength, ValidateIf } from 'class-validator';
+import {
+  IsAlphanumeric,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 @InputType()
 export class CreateUserInput {
-  @IsEmail()
-  @ValidateIf((_, value) => value !== undefined)
-  @Field({ nullable: true })
-  email?: string;
-
-  @IsString()
-  @MaxLength(20)
   @Field()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(20)
   name: string;
+
+  @IsAlphanumeric()
+  @ValidateIf((_, value) => value !== undefined)
+  @MinLength(2)
+  @Field({ nullable: true })
+  username?: string;
 
   @Field({ nullable: true })
   profile?: string;

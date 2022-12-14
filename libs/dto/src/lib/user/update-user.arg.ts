@@ -17,9 +17,9 @@ export class UpdateUserInput {
   @Field({ nullable: true })
   status?: string;
 
-  @Field(() => [Role], {
-    nullable: 'itemsAndList',
+  @Field(() => Role, {
+    nullable: true,
     description: '修改该字段需要 Admin 权限',
   })
-  roles?: Role[];
+  role?: Role;
 }

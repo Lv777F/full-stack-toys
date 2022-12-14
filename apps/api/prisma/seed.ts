@@ -10,26 +10,22 @@ const podcastData = [...Array(50)].map((_, i) => ({
 
 const userData = [
   {
-    name: 'franky',
-    email: 'q404023244@gmail.com',
-    roles: [Role.Admin],
+    username: 'franky',
+    role: Role.Admin,
   },
   {
-    name: 'cabbage',
-    email: 'cabbage@gmail.com',
-    roles: [Role.Contributor],
+    username: 'cabbage',
+    role: Role.Admin,
   },
   {
-    name: 'xinbao',
-    email: 'xinbao@gmail.com',
-    roles: [Role.Admin],
+    username: 'xinbao',
+    role: Role.Admin,
   },
   ...Array(30)
     .fill(null)
     .map((_, i) => ({
-      name: `测试用户 ${i + 1}`,
-      email: `test${i + 1}@gmail.com`,
-      roles: Math.random() > 0.8 ? [Role.Contributor] : [],
+      username: `test${i + 1}`,
+      role: Role.Contributor,
     })),
 ];
 
@@ -56,7 +52,7 @@ async function main() {
 
   const users = await prisma.user
     .createMany({
-      data: userData.map((user) => ({ ...user, hash })),
+      data: userData.map((user) => ({ ...user, hash, name: user.username })),
       skipDuplicates: true,
     })
     .then(() => prisma.user.findMany());
@@ -76,7 +72,6 @@ async function main() {
         authors: {
           createMany: {
             data: users
-              .filter(({ roles }) => roles.length > 0)
               .flatMap((item) => (Math.random() > 0.3 ? [item] : []))
               .map(({ id: userId }) => ({
                 authorId: userId,

@@ -15,14 +15,14 @@ enum Role {
 
 model User {
   id        Int      @id @default(autoincrement())
+  username  String?  @unique
   name      String
-  profile   String?
+  profile   String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  email     String?  @unique
   hash      String?
   status    String?
-  roles     Role[]
+  role      Role     @default(Contributor)
 
   podcasts PodcastAuthor[]
   posts    Post[]

@@ -20,32 +20,32 @@ export type AppAbility = PureAbility<
 >;
 @Injectable()
 export class CaslAbilityFactory {
-  createAbility(user?: Pick<User, 'id' | 'roles'>) {
+  createAbility(user?: Pick<User, 'id' | 'role'>) {
     const { can, cannot, build } = new AbilityBuilder<AppAbility>(
       createPrismaAbility
     );
 
     can(Action.Read, 'Podcast', { published: true });
     can(Action.Read, 'Post', { published: true });
-    can(Action.Read, 'User', ['id', 'name', 'profile', 'status', 'roles']);
+    can(Action.Read, 'User', ['id', 'name', 'profile', 'status', 'role']);
 
     if (user) {
-      can(Action.Read, 'User', ['email'], {
-        id: user.id,
-      });
-      can(Action.Update, 'User', ['name', 'profile', 'status'], {
+      can(Action.Read, 'User', ['username'], { id: user.id });
+
+      can(Action.Update, 'User', ['profile', 'status', 'name'], {
         id: user.id,
       });
 
-      if (user.roles.includes(Role.Contributor)) {
-        can([Action.Read, Action.Update], 'Podcast', {
-          authors: { some: { authorId: { equals: user.id } } },
-        });
-      }
+      can([Action.Read, Action.Update], 'Podcast', {
+        authors: { some: { authorId: { equals: user.id } } },
+      });
 
-      if (user.roles.includes(Role.Admin)) {
-        can(Action.Read, 'User', ['email']);
-        can(Action.Update, 'User', ['roles']);
+      if (user.role === Role.Admin) {
+        can([Action.Update, Action.Read], 'User', [
+          'role',
+          'username',
+          'inviteCode',
+        ]);
         can(Action.Manage, 'all', ['all']);
       }
     }

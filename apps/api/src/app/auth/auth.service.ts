@@ -1,11 +1,16 @@
-import { ValidationError } from '@full-stack-toys/api-interface';
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import {
+  RedisKey,
+  UnAuthorizedError,
+  ValidationError,
+} from '@full-stack-toys/api-interface';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { Cache } from 'cache-manager';
-import { delayWhen, forkJoin, from, map, switchMap, tap } from 'rxjs';
+import { Redis } from 'ioredis';
+import { delayWhen, forkJoin, from, map, of, switchMap, tap } from 'rxjs';
 import { UsersService } from '../users/users.service';
 import { RequestUser } from './decorator';
 
@@ -15,19 +20,19 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    @Inject(CACHE_MANAGER) private cacheService: Cache
+    @InjectRedis() private redis: Redis
   ) {}
 
   /**
    * 校验用户名和密码
    *
-   * @param email 邮箱
+   * @param username 用户名
    * @param password 密码
    *
    * @returns 包含 userId 的对象, 用于 passport 携带到 req 中
    */
-  validateUser(email: User['email'], password: string) {
-    return this.usersService.findOneByEmail(email).pipe(
+  validateUser(username: User['username'], password: string) {
+    return this.usersService.findOneByUsername(username).pipe(
       delayWhen(({ hash }) =>
         // 校验密码与 hash
         from(argon2.verify(hash, password)).pipe(
@@ -36,7 +41,7 @@ export class AuthService {
           })
         )
       ),
-      map(({ id, roles }) => ({ id, roles }))
+      map(({ id, role }) => ({ id, role }))
     );
   }
 
@@ -47,11 +52,11 @@ export class AuthService {
    *
    * @returns tokens
    */
-  generateTokens({ id: userId, roles }: RequestUser) {
+  signTokens({ id: userId, role }: RequestUser) {
     return forkJoin([
       from(
         this.jwtService.signAsync(
-          { sub: userId, roles },
+          { sub: userId, role },
           {
             secret: this.configService.get('JWT_SECRET'),
             expiresIn: this.configService.get('JWT_EXPIRES_IN'),
@@ -75,30 +80,37 @@ export class AuthService {
   /**
    * 注册
    *
-   * @param userData 注册必须信息
+   * @param inviteCode
+   * @param userData
    *
    * @returns tokens
    */
-  signUp({
-    password,
-    ...userInfo
-  }: Omit<Prisma.UserCreateInput, 'hash'> & { password: string }) {
-    // 转换密码为哈希保存
-    return from(argon2.hash(password)).pipe(
-      switchMap((hash) => this.usersService.create({ ...userInfo, hash })),
-      switchMap(({ id, roles }) => this.login({ id, roles }))
+  signUp(
+    inviteCode: string,
+    {
+      password,
+      ...userInfo
+    }: Omit<Prisma.UserUpdateInput, 'hash'> & { password: string }
+  ) {
+    return from(this.redis.hgetall(RedisKey.InviteCodes)).pipe(
+      map((inviteCodes) =>
+        Object.keys(inviteCodes).find(
+          (userId) => inviteCodes[userId] === inviteCode
+        )
+      ),
+      tap((userId) => {
+        if (!userId) throw new UnAuthorizedError('凭证过期或无效');
+      }),
+      switchMap((userId) =>
+        from(argon2.hash(password)).pipe(
+          switchMap((hash) =>
+            this.usersService.update(+userId, { ...userInfo, hash })
+          )
+        )
+      ),
+      tap(({ id }) => this.redis.hdel(RedisKey.InviteCodes, id + '')),
+      switchMap(({ id, role }) => this.signTokens({ id, role }))
     );
-  }
-
-  /**
-   * 登录
-   *
-   * @param user
-   *
-   * @returns tokens
-   */
-  login(user: RequestUser) {
-    return this.generateTokens(user);
   }
 
   /**
@@ -110,11 +122,11 @@ export class AuthService {
    * @returns tokens
    */
   refresh(userId: User['id'], token: string) {
-    // 重新获取用户 roles 并授权
+    // 重新获取用户 role 并授权
     return this.usersService.findOne(userId).pipe(
-      switchMap(({ roles }) => this.generateTokens({ id: userId, roles })),
+      switchMap(({ role }) => this.signTokens({ id: userId, role })),
       // 使当前使用的 refreshToken 失效
-      delayWhen(() => this.logout(token))
+      delayWhen(() => this.logout(userId, token))
     );
   }
 
@@ -125,19 +137,17 @@ export class AuthService {
    *
    * @returns
    */
-  logout(token: string) {
-    // 添加当前 token 到 redis 黑名单
-    return from(this.cacheService.set(`bl_${token}`, true));
-  }
-
-  /**
-   * 判断当前 token 是否有效 ( 不在 redis 黑名单中 )
-   *
-   * @param token
-   *
-   * @returns redis 查询结果
-   */
-  checkToken(token: string) {
-    return from(this.cacheService.get(`bl_${token}`)).pipe(map((r) => !r));
+  logout(userId: User['id'], token: string) {
+    return of(RedisKey.RefreshTokenBlacklist.replace('{id}', userId + '')).pipe(
+      switchMap((blacklistKey) =>
+        from(
+          this.redis
+            .multi()
+            .sadd(blacklistKey, token)
+            .expire(blacklistKey, '7d')
+            .exec()
+        )
+      )
+    );
   }
 }
