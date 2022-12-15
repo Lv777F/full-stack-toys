@@ -9,3 +9,11 @@ export class UnAuthorizedError extends Error {
 export class NotFoundError extends Error {
   name: 'NotFoundError';
 }
+
+export class TargetNotFoundError extends Error {
+  name: 'TargetNotFoundError';
+}
+
+export class DuplicateError extends Error {
+  name: 'DuplicateError';
+}

@@ -1,4 +1,8 @@
-import { UnAuthorizedError } from '@full-stack-toys/api-interface';
+import {
+  DuplicateError,
+  TargetNotFoundError,
+  UnAuthorizedError,
+} from '@full-stack-toys/api-interface';
 import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
 import {
   BadRequestException,
@@ -6,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { catchError, map } from 'rxjs';
 import { AuthService } from './auth.service';
 import { CurrentUser, RequestUser } from './decorator';
@@ -41,10 +44,10 @@ export class AuthResolver {
       .pipe(
         catchError((err) => {
           if (
-            err instanceof PrismaClientKnownRequestError &&
-            err.code === 'P2002'
+            err instanceof DuplicateError ||
+            err instanceof TargetNotFoundError
           )
-            throw new BadRequestException('用户名已注册');
+            throw new BadRequestException(err.message);
           if (err instanceof UnAuthorizedError)
             throw new UnauthorizedException(err.message);
           throw err;

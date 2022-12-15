@@ -1,7 +1,10 @@
 import { subject } from '@casl/ability';
 import { permittedFieldsOf } from '@casl/ability/extra';
 import { accessibleBy } from '@casl/prisma';
-import { NotFoundError } from '@full-stack-toys/api-interface';
+import {
+  NotFoundError,
+  TargetNotFoundError,
+} from '@full-stack-toys/api-interface';
 import {
   CreateUserInput,
   OffsetBasedPaginationInput,
@@ -30,7 +33,6 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { Prisma, Role } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { AllowAnonymous, CurrentUser, RequestUser } from '../auth/decorator';
 import { JwtAuthGuard } from '../auth/guard';
@@ -222,10 +224,7 @@ export class UsersResolver {
       )
       .pipe(
         catchError((err) => {
-          if (
-            err instanceof PrismaClientKnownRequestError &&
-            err.code === 'P2025'
-          )
+          if (err instanceof TargetNotFoundError)
             throw new ForbiddenException(`越权修改用户: ${userId}`);
           throw err;
         })
