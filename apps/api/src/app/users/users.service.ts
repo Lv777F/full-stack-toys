@@ -1,10 +1,24 @@
-import { NotFoundError, RedisKey } from '@full-stack-toys/api-interface';
+import {
+  NotFoundError,
+  RedisKey,
+  TargetNotFoundError,
+} from '@full-stack-toys/api-interface';
 import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { Redis } from 'ioredis';
-import { delayWhen, forkJoin, from, map, of, pipe, tap } from 'rxjs';
+import {
+  catchError,
+  delayWhen,
+  forkJoin,
+  from,
+  map,
+  of,
+  pipe,
+  tap,
+} from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -60,7 +74,17 @@ export class UsersService {
           AND: [where],
         },
       })
-    ).pipe(desensitize());
+    ).pipe(
+      catchError((err) => {
+        if (
+          err instanceof PrismaClientKnownRequestError &&
+          err.code === 'P2025'
+        )
+          throw new TargetNotFoundError();
+        throw err;
+      }),
+      desensitize()
+    );
   }
 
   /**
@@ -95,7 +119,7 @@ export class UsersService {
    */
   findOneByUsername(username: User['username']) {
     return from(
-      this.prisma.user.findUniqueOrThrow({
+      this.prisma.user.findUnique({
         where: {
           username,
         },
@@ -104,6 +128,10 @@ export class UsersService {
           id: true,
           role: true,
         },
+      })
+    ).pipe(
+      tap((user) => {
+        if (!user) throw new NotFoundError('未找到用户');
       })
     );
   }

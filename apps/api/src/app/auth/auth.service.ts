@@ -1,5 +1,7 @@
 import {
+  DuplicateError,
   RedisKey,
+  TargetNotFoundError,
   UnAuthorizedError,
   ValidationError,
 } from '@full-stack-toys/api-interface';
@@ -8,9 +10,19 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import * as argon2 from 'argon2';
 import { Redis } from 'ioredis';
-import { delayWhen, forkJoin, from, map, of, switchMap, tap } from 'rxjs';
+import {
+  catchError,
+  delayWhen,
+  forkJoin,
+  from,
+  map,
+  of,
+  switchMap,
+  tap,
+} from 'rxjs';
 import { UsersService } from '../users/users.service';
 import { RequestUser } from './decorator';
 
@@ -104,7 +116,21 @@ export class AuthService {
       switchMap((userId) =>
         from(argon2.hash(password)).pipe(
           switchMap((hash) =>
-            this.usersService.update(+userId, { ...userInfo, hash })
+            this.usersService
+              .update(+userId, { ...userInfo, hash }, { username: null })
+              .pipe(
+                catchError((err) => {
+                  if (err instanceof PrismaClientKnownRequestError) {
+                    if (err.code === 'P2002')
+                      throw new DuplicateError('用户名已注册');
+                    if (err.code === 'P2025') {
+                      this.redis.hdel(RedisKey.InviteCodes, userId);
+                      throw new TargetNotFoundError('该用户已完成注册');
+                    }
+                  }
+                  throw err;
+                })
+              )
           )
         )
       ),
