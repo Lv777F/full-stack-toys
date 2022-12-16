@@ -1,8 +1,4 @@
-import {
-  NotFoundError,
-  RedisKey,
-  TargetNotFoundError,
-} from '@full-stack-toys/api-interface';
+import { NotFoundError, RedisKey } from '@full-stack-toys/api-interface';
 import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
@@ -80,7 +76,7 @@ export class UsersService {
           err instanceof PrismaClientKnownRequestError &&
           err.code === 'P2025'
         )
-          throw new TargetNotFoundError();
+          throw new NotFoundError();
         throw err;
       }),
       desensitize()

@@ -1,6 +1,6 @@
 import {
   DuplicateError,
-  TargetNotFoundError,
+  NotFoundError,
   UnAuthorizedError,
 } from '@full-stack-toys/api-interface';
 import { Credentials, LoginInput, SignUpInput } from '@full-stack-toys/dto';
@@ -43,10 +43,7 @@ export class AuthResolver {
       })
       .pipe(
         catchError((err) => {
-          if (
-            err instanceof DuplicateError ||
-            err instanceof TargetNotFoundError
-          )
+          if (err instanceof DuplicateError || err instanceof NotFoundError)
             throw new BadRequestException(err.message);
           if (err instanceof UnAuthorizedError)
             throw new UnauthorizedException(err.message);

@@ -1,7 +1,7 @@
 import {
   DuplicateError,
+  NotFoundError,
   RedisKey,
-  TargetNotFoundError,
   UnAuthorizedError,
   ValidationError,
 } from '@full-stack-toys/api-interface';
@@ -125,7 +125,7 @@ export class AuthService {
                       throw new DuplicateError('用户名已注册');
                     if (err.code === 'P2025') {
                       this.redis.hdel(RedisKey.InviteCodes, userId);
-                      throw new TargetNotFoundError('该用户已完成注册');
+                      throw new NotFoundError('该用户已完成注册');
                     }
                   }
                   throw err;
