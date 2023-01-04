@@ -1,10 +1,7 @@
 import { subject } from '@casl/ability';
 import { permittedFieldsOf } from '@casl/ability/extra';
 import { accessibleBy } from '@casl/prisma';
-import {
-  NotFoundError,
-  TargetNotFoundError,
-} from '@full-stack-toys/api-interface';
+import { NotFoundError } from '@full-stack-toys/api-interface';
 import {
   CreateUserInput,
   OffsetBasedPaginationInput,
@@ -224,7 +221,7 @@ export class UsersResolver {
       )
       .pipe(
         catchError((err) => {
-          if (err instanceof TargetNotFoundError)
+          if (err instanceof NotFoundError)
             throw new ForbiddenException(`越权修改用户: ${userId}`);
           throw err;
         })
