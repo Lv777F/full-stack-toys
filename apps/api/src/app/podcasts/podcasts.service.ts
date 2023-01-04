@@ -1,7 +1,7 @@
 import { NotFoundError } from '@full-stack-toys/api-interface';
 import { CursorBasedPaginationInput } from '@full-stack-toys/dto';
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, Tag } from '@prisma/client';
 import { forkJoin, from, map, tap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -91,6 +91,33 @@ export class PodcastsService {
     ).pipe(
       tap((podcast) => {
         if (!podcast) throw new NotFoundError('未找到播客');
+      })
+    );
+  }
+
+  create(
+    podcast: Prisma.PodcastCreateInput,
+    authors: Prisma.PodcastAuthorUncheckedCreateWithoutPodcastInput[],
+    tags: Tag['name'][]
+  ) {
+    return from(
+      this.prisma.podcast.create({
+        data: {
+          ...podcast,
+          authors: {
+            create: authors,
+          },
+          tags: {
+            create: tags.map((name) => ({
+              tag: {
+                connectOrCreate: {
+                  where: { name },
+                  create: { name },
+                },
+              },
+            })),
+          },
+        },
       })
     );
   }

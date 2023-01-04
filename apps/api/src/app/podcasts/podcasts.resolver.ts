@@ -11,7 +11,7 @@ import {
 } from '@full-stack-toys/dto';
 import { Selections } from '@jenyus-org/nestjs-graphql-utils';
 import { NotFoundException, UseGuards } from '@nestjs/common';
-import { Args, ID, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Prisma } from '@prisma/client';
 import { catchError } from 'rxjs';
 import { AllowAnonymous, CurrentUser, RequestUser } from '../auth/decorator';
@@ -61,7 +61,7 @@ const whereMap: Partial<
   }),
 };
 
-@Resolver()
+@Resolver(() => Podcast)
 @UseGuards(JwtAuthGuard)
 export class PodcastsResolver {
   constructor(
@@ -116,5 +116,10 @@ export class PodcastsResolver {
           throw err;
         })
       );
+  }
+
+  @Mutation(() => Podcast)
+  createPodcast() {
+    return {};
   }
 }
