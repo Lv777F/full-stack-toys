@@ -3,7 +3,7 @@ import { OffsetBasedPaginationInput } from '@full-stack-toys/dto';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { Redis } from 'ioredis';
 import {
   catchError,
