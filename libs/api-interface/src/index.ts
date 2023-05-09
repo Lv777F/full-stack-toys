@@ -1,2 +1,2 @@
 export * from './lib/api-error';
-export * from './lib/redis-key'
+export * from './lib/redis-key';
