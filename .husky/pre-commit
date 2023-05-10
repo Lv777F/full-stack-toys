@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+nx affected -t lint --uncommitted --fix true
+nx format:write --uncommitted
