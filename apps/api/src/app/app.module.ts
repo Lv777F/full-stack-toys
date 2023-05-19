@@ -1,3 +1,4 @@
+import { ApolloServerPluginInlineTrace } from '@apollo/server/plugin/inlineTrace';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
@@ -18,7 +19,10 @@ import { UsersModule } from './users/users.module';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       playground: false,
-      plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+      plugins: [
+        ApolloServerPluginLandingPageLocalDefault({ embed: true }),
+        ApolloServerPluginInlineTrace(),
+      ],
       autoSchemaFile: true,
     }),
     RedisModule.forRootAsync({
